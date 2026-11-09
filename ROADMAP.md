@@ -9,7 +9,7 @@
 - [ ] Collider generation
 - [x] Block registry
 - [ ] Textures and materials per blocks
-- [ ] Auto tiling using dual grid
+- [x] Auto tiling using dual grid
 - [ ] Lock grids rotation
 
 ## Multiplayer

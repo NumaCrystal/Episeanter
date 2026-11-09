@@ -30,15 +30,8 @@ namespace Episeanter.Grids
             new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 0, 0) }
         };
 
-        private static readonly Vector2[] FaceUv =
-        {
-            new Vector2(0, 0),
-            new Vector2(0, 1),
-            new Vector2(1, 1),
-            new Vector2(1, 0)
-        };
-
         private readonly Dictionary<Vector2Int, Chunk> chunks = new Dictionary<Vector2Int, Chunk>();
+        private readonly HashSet<Vector2Int> dirtyChunks = new HashSet<Vector2Int>();
 
         private void OnValidate()
         {
@@ -69,8 +62,13 @@ namespace Episeanter.Grids
                 chunks.Add(chunkPosition, chunk);
             }
 
-            chunk.Tiles[GetLocalPosition(position)] = tileId;
-            RebuildAffectedChunks(position);
+            Vector3Int localPosition = GetLocalPosition(position);
+            if (chunk.Tiles.TryGetValue(localPosition, out uint currentTileId)
+                && currentTileId == tileId)
+                return;
+
+            chunk.Tiles[localPosition] = tileId;
+            MarkAffectedChunksDirty(position);
         }
 
         private bool RemoveTileAt(Vector3Int position)
@@ -82,7 +80,7 @@ namespace Episeanter.Grids
                 || !chunk.Tiles.Remove(GetLocalPosition(position)))
                 return false;
 
-            RebuildAffectedChunks(position);
+            MarkAffectedChunksDirty(position);
             return true;
         }
 
@@ -133,20 +131,27 @@ namespace Episeanter.Grids
             return chunk;
         }
 
-        private void RebuildAffectedChunks(Vector3Int position)
+        private void MarkAffectedChunksDirty(Vector3Int position)
         {
-            var affectedChunks = new HashSet<Vector2Int> { GetChunkPosition(position) };
-            foreach (Vector3Int offset in NeighborOffsets)
+            for (int x = -1; x <= 1; x++)
             {
-                if (TryGetNeighborPosition(position, offset, out Vector3Int neighbor))
-                    affectedChunks.Add(GetChunkPosition(neighbor));
+                for (int z = -1; z <= 1; z++)
+                {
+                    if (TryGetNeighborPosition(position, new Vector3Int(x, 0, z), out Vector3Int neighbor))
+                        dirtyChunks.Add(GetChunkPosition(neighbor));
+                }
             }
+        }
 
-            foreach (Vector2Int chunkPosition in affectedChunks)
+        private void LateUpdate()
+        {
+            foreach (Vector2Int chunkPosition in dirtyChunks)
             {
                 if (chunks.TryGetValue(chunkPosition, out Chunk chunk))
                     RebuildChunk(chunkPosition, chunk);
             }
+
+            dirtyChunks.Clear();
         }
 
         private void RebuildChunk(Vector2Int position, Chunk chunk)
@@ -164,6 +169,8 @@ namespace Episeanter.Grids
             List<Material> materials = chunk.Materials;
             Dictionary<Material, int> materialIndices = chunk.MaterialIndices;
             List<List<int>> trianglesByMaterial = chunk.TrianglesByMaterial;
+            Mesh mesh = chunk.MeshFilter.sharedMesh;
+            chunk.MeshCollider.sharedMesh = null;
             vertices.Clear();
             uv.Clear();
             materials.Clear();
@@ -173,31 +180,40 @@ namespace Episeanter.Grids
 
             foreach (KeyValuePair<Vector3Int, uint> tileEntry in chunk.Tiles)
             {
-                int materialIndex;
-                Material material = GetTileRegistry().GetDefinition(tileEntry.Value).Material;
-                if (!materialIndices.TryGetValue(material, out materialIndex))
-                {
-                    materialIndex = materials.Count;
-                    materialIndices.Add(material, materialIndex);
-                    materials.Add(material);
-                    if (materialIndex == trianglesByMaterial.Count)
-                        trianglesByMaterial.Add(new List<int>());
-                    else
-                        trianglesByMaterial[materialIndex].Clear();
-                }
-
+                TileDefinition definition = GetTileRegistry().GetDefinition(tileEntry.Value);
                 for (int face = 0; face < NeighborOffsets.Length; face++)
                 {
+                    if (face == 3)
+                        continue;
+
                     Vector3Int globalPosition = GetGlobalPosition(position, tileEntry.Key);
                     if (TryGetNeighborPosition(globalPosition, NeighborOffsets[face], out Vector3Int neighbor)
                         && TryReadTileId(neighbor, out _))
                         continue;
 
-                    AddFace(tileEntry.Key, FaceVertices[face], vertices, uv, trianglesByMaterial[materialIndex]);
+                    Material material = face == 2 ? definition.Material : definition.SideMaterial;
+                    if (!materialIndices.TryGetValue(material, out int materialIndex))
+                    {
+                        materialIndex = materials.Count;
+                        materialIndices.Add(material, materialIndex);
+                        materials.Add(material);
+                        if (materialIndex == trianglesByMaterial.Count)
+                            trianglesByMaterial.Add(new List<int>());
+                        else
+                            trianglesByMaterial[materialIndex].Clear();
+                    }
+
+                    AddDualGridFace(
+                        tileEntry.Key,
+                        globalPosition,
+                        face,
+                        tileEntry.Value,
+                        vertices,
+                        uv,
+                        trianglesByMaterial[materialIndex]);
                 }
             }
 
-            Mesh mesh = chunk.MeshFilter.sharedMesh;
             mesh.Clear();
             mesh.SetVertices(vertices);
             mesh.SetUVs(0, uv);
@@ -206,6 +222,7 @@ namespace Episeanter.Grids
                 mesh.SetTriangles(trianglesByMaterial[i], i);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
+            chunk.MeshCollider.sharedMesh = mesh;
             if (!chunk.HasSameMaterials(materials))
             {
                 chunk.RendererMaterials = materials.ToArray();
@@ -213,26 +230,126 @@ namespace Episeanter.Grids
             }
         }
 
-        private static void AddFace(
+        private void AddDualGridFace(
             Vector3Int tilePosition,
-            Vector3[] face,
+            Vector3Int globalPosition,
+            int faceIndex,
+            uint tileId,
             List<Vector3> vertices,
             List<Vector2> uv,
             List<int> triangles)
         {
-            int firstVertex = vertices.Count;
-            for (int i = 0; i < face.Length; i++)
+            Vector3[] face = FaceVertices[faceIndex];
+            GetFaceTangentAxes(faceIndex, out int uAxis, out int vAxis);
+            for (int cornerIndex = 0; cornerIndex < face.Length; cornerIndex++)
             {
-                vertices.Add(tilePosition + face[i]);
-                uv.Add(FaceUv[i]);
+                Vector3 corner = face[cornerIndex];
+                Vector3 next = face[(cornerIndex + 1) % face.Length];
+                Vector3 previous = face[(cornerIndex + face.Length - 1) % face.Length];
+                Vector3 center = (corner + next + previous + face[(cornerIndex + 2) % face.Length]) * 0.25f;
+                Vector3[] patch =
+                {
+                    corner,
+                    (corner + next) * 0.5f,
+                    center,
+                    (previous + corner) * 0.5f
+                };
+
+                int mask = GetDualGridMask(globalPosition, corner, uAxis, vAxis, tileId);
+                int atlasColumn = mask % 4;
+                int atlasRow = mask / 4;
+                int firstVertex = vertices.Count;
+                for (int i = 0; i < patch.Length; i++)
+                {
+                    vertices.Add(tilePosition + patch[i]);
+                    uv.Add(new Vector2(
+                        (atlasColumn + GetAxisValue(patch[i], uAxis)) * 0.25f,
+                        (atlasRow + GetAxisValue(patch[i], vAxis)) * 0.25f));
+                }
+
+                triangles.Add(firstVertex);
+                triangles.Add(firstVertex + 1);
+                triangles.Add(firstVertex + 2);
+                triangles.Add(firstVertex);
+                triangles.Add(firstVertex + 2);
+                triangles.Add(firstVertex + 3);
+            }
+        }
+
+        private int GetDualGridMask(
+            Vector3Int globalPosition,
+            Vector3 corner,
+            int uAxis,
+            int vAxis,
+            uint tileId)
+        {
+            int mask = 0;
+            int cornerU = Mathf.RoundToInt(GetAxisValue(corner, uAxis));
+            int cornerV = Mathf.RoundToInt(GetAxisValue(corner, vAxis));
+            for (int bit = 0; bit < 4; bit++)
+            {
+                int directionU = (bit & 1) == 0 ? -1 : 1;
+                int directionV = (bit & 2) == 0 ? -1 : 1;
+                var offset = new Vector3Int();
+                SetAxisValue(ref offset, uAxis, GetCornerOffset(cornerU, directionU));
+                SetAxisValue(ref offset, vAxis, GetCornerOffset(cornerV, directionV));
+
+                if (TryGetNeighborPosition(globalPosition, offset, out Vector3Int neighbor)
+                    && TryReadTileId(neighbor, out uint neighborTileId)
+                    && neighborTileId == tileId)
+                {
+                    mask |= 1 << bit;
+                }
             }
 
-            triangles.Add(firstVertex);
-            triangles.Add(firstVertex + 1);
-            triangles.Add(firstVertex + 2);
-            triangles.Add(firstVertex);
-            triangles.Add(firstVertex + 2);
-            triangles.Add(firstVertex + 3);
+            return mask;
+        }
+
+        private static int GetCornerOffset(int cornerCoordinate, int direction)
+        {
+            if (cornerCoordinate == 0)
+                return direction < 0 ? -1 : 0;
+
+            return direction < 0 ? 0 : 1;
+        }
+
+        private static void GetFaceTangentAxes(int faceIndex, out int uAxis, out int vAxis)
+        {
+            if (faceIndex < 2)
+            {
+                uAxis = 1;
+                vAxis = 2;
+            }
+            else if (faceIndex < 4)
+            {
+                uAxis = 0;
+                vAxis = 2;
+            }
+            else
+            {
+                uAxis = 0;
+                vAxis = 1;
+            }
+        }
+
+        private static float GetAxisValue(Vector3 value, int axis)
+        {
+            switch (axis)
+            {
+                case 0: return value.x;
+                case 1: return value.y;
+                default: return value.z;
+            }
+        }
+
+        private static void SetAxisValue(ref Vector3Int value, int axis, int component)
+        {
+            switch (axis)
+            {
+                case 0: value.x = component; break;
+                case 1: value.y = component; break;
+                default: value.z = component; break;
+            }
         }
 
         private static bool TryGetNeighborPosition(
@@ -310,6 +427,7 @@ namespace Episeanter.Grids
             }
 
             chunks.Clear();
+            dirtyChunks.Clear();
         }
 
         private sealed class Chunk
@@ -317,6 +435,7 @@ namespace Episeanter.Grids
             public readonly GameObject GameObject;
             public readonly MeshFilter MeshFilter;
             public readonly MeshRenderer MeshRenderer;
+            public readonly MeshCollider MeshCollider;
             public readonly Dictionary<Vector3Int, uint> Tiles = new Dictionary<Vector3Int, uint>();
             public readonly List<Vector3> Vertices = new List<Vector3>();
             public readonly List<Vector2> Uv = new List<Vector2>();
@@ -330,6 +449,7 @@ namespace Episeanter.Grids
                 GameObject = gameObject;
                 MeshFilter = gameObject.AddComponent<MeshFilter>();
                 MeshRenderer = gameObject.AddComponent<MeshRenderer>();
+                MeshCollider = gameObject.AddComponent<MeshCollider>();
             }
 
             public bool HasSameMaterials(List<Material> materials)

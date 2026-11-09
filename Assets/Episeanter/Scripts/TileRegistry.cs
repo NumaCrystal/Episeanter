@@ -116,6 +116,8 @@ namespace Episeanter.Grids
                     throw new InvalidOperationException($"Tile '{entry.Definition.name}' appears more than once in registry '{name}'.");
                 if (entry.Definition.Material == null)
                     throw new InvalidOperationException($"Tile '{entry.Definition.name}' in registry '{name}' has no material.");
+
+                entry.Definition.ValidateTextureAtlases();
             }
 
             definitionsById = newDefinitionsById;
