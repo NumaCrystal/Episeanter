@@ -119,6 +119,66 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1001 &295333994
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 1.07549
+      objectReference: {fileID: 0}
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 20.67234
+      objectReference: {fileID: 0}
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -27.09643
+      objectReference: {fileID: 0}
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      propertyPath: m_Name
+      value: Grid
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2131881871}
+  m_SourcePrefab: {fileID: 100100000, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
 --- !u!1 &330585543
 GameObject:
   m_ObjectHideFlags: 0
@@ -494,12 +554,82 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1700000000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1700000001}
+  - component: {fileID: 1700000002}
+  m_Layer: 0
+  m_Name: TileRegistry
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1700000001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1700000002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a01181112894fe481683ab108cfb8a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Episeanter.Grids.TileRegistry
+  entries:
+  - id: 1
+    definition: {fileID: 11400000, guid: bc7f56a0a00f2fa45a7f8dfa440e461f, type: 2}
+  - id: 2
+    definition: {fileID: 11400000, guid: 76294140755feec4387a4808dd25a7ac, type: 2}
+--- !u!1 &2131881870 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+  m_PrefabInstance: {fileID: 295333994}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2131881871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2131881870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7c373a769edbaf45a86d379c19ad501, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GridTest
+  grid: {fileID: 0}
+  tileDefinition: {fileID: 11400000, guid: bc7f56a0a00f2fa45a7f8dfa440e461f, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 883638363}
+  - {fileID: 1700000001}
   - {fileID: 1476576208}
   - {fileID: 330585546}
   - {fileID: 410087041}
   - {fileID: 832575519}
+  - {fileID: 295333994}

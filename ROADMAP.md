@@ -4,12 +4,12 @@
 
 ## Base systems
 - [ ] Static/dynamic grids
-- [ ] Meshing system
-- [ ] Chunk systems
+- [x] Meshing system
+- [x] Chunk systems
 - [ ] Collider generation
-- [ ] Block registry
+- [x] Block registry
 - [ ] Textures and materials per blocks
-- [ ] Auto tiling
+- [ ] Auto tiling using dual grid
 - [ ] Lock grids rotation
 
 ## Multiplayer
