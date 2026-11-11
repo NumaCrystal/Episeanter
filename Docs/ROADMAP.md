@@ -3,18 +3,18 @@
 > Status: pre-alpha · Last update: 09.11.2026
 
 ## Base systems
-- [ ] Static/dynamic grids
+- [x] Static/dynamic grids
 - [x] Meshing system
 - [x] Chunk systems
-- [ ] Collider generation
+- [x] Collider generation
 - [x] Block registry
-- [ ] Textures and materials per blocks
+- [x] Textures and materials per blocks
 - [x] Auto tiling using dual grid
-- [ ] Lock grids rotation
+- [x] Lock grids rotation
 
 ## Multiplayer
-- [ ] Sync tiles and grids within players
-- [ ] Tile placement/breaking
+- [x] Sync tiles and grids within players
+- [x] Tile placement/breaking
 - [ ] Grid creation system
 - [ ] Grid destroy system
 - [ ] Grid fragmentation system

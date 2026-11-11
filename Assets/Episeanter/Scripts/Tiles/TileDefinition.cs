@@ -13,9 +13,24 @@ namespace Episeanter.Grids
         [SerializeField] private Material material;
         [SerializeField, Tooltip("Optional material for side surfaces. Uses the default material when empty.")]
         private Material sideMaterial;
+        [SerializeField, Min(0.01f)] private float maxHealth = 100f;
+        [SerializeField, Min(0f), Tooltip("Damage values below this threshold are ignored.")]
+        private float minimumDamage;
 
         public Material Material => material;
         public Material SideMaterial => sideMaterial != null ? sideMaterial : material;
+        public float MaxHealth => maxHealth;
+        public float MinimumDamage => minimumDamage;
+
+        private void OnValidate()
+        {
+            maxHealth = float.IsNaN(maxHealth) || float.IsInfinity(maxHealth)
+                ? 100f
+                : Mathf.Max(0.01f, maxHealth);
+            minimumDamage = float.IsNaN(minimumDamage) || float.IsInfinity(minimumDamage)
+                ? 0f
+                : Mathf.Max(0f, minimumDamage);
+        }
 
         internal void ValidateTextureAtlases()
         {

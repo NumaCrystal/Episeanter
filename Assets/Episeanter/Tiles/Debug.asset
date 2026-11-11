@@ -13,3 +13,4 @@ MonoBehaviour:
   m_Name: Debug
   m_EditorClassIdentifier: Assembly-CSharp::Episeanter.Grids.TileDefinition
   material: {fileID: 2100000, guid: 8d7c4313bf6b4e0419b6e9d5489a50de, type: 2}
+  sideMaterial: {fileID: 2100000, guid: 1cd97c0da2e81364c8e01fd467a04f35, type: 2}
