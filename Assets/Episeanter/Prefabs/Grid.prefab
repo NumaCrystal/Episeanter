@@ -9,12 +9,15 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5142335316388592785}
+<<<<<<< HEAD
   - component: {fileID: 3755194618286889112}
   - component: {fileID: 6843781023158832101}
   - component: {fileID: 3755194618286889111}
   - component: {fileID: 3755194618286889113}
   - component: {fileID: 2882179816371820101}
   - component: {fileID: 3439109668082487489}
+=======
+>>>>>>> 0be167e339ec0e7021c3eddb4c377eb5df3e89bd
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -37,6 +40,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+<<<<<<< HEAD
 --- !u!114 &3755194618286889112
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -147,3 +151,5 @@ MonoBehaviour:
   positionSensitivity: 0.01
   rotationSensitivity: 0.01
   scaleSensitivity: 0.01
+=======
+>>>>>>> 0be167e339ec0e7021c3eddb4c377eb5df3e89bd
