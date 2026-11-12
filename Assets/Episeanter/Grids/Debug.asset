@@ -9,7 +9,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 760729e0e5c74665bb2e1df0393a76a9, type: 3}
+  m_Script: {fileID: 11500000, guid: 61f5f491a7a741f4c91e3881ba95f79a, type: 3}
   m_Name: Debug
-  m_EditorClassIdentifier: Assembly-CSharp::Episeanter.Grids.TileDefinition
-  material: {fileID: 2100000, guid: 8d7c4313bf6b4e0419b6e9d5489a50de, type: 2}
+  m_EditorClassIdentifier: Episeanter.Content.Shared::Episeanter.Content.Shared.Maps.TileDefinition
+  solid: 1

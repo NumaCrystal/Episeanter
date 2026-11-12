@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
+using Episeanter.Content.Shared.Maps;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace Episeanter.Grids
+namespace Episeanter.Content.Client.Maps
 {
-    public sealed partial class Grid
+    [DisallowMultipleComponent]
+    public sealed class GridRenderer : MonoBehaviour
     {
-        [SerializeField, Min(1)] private int heightLimit = 2;
-        [SerializeField, Min(1)] private int chunkSize = 16;
+        [SerializeField] private TileVisuals visuals;
 
         private static readonly Vector3Int[] NeighborOffsets =
         {
@@ -30,105 +31,70 @@ namespace Episeanter.Grids
             new[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3(1, 0, 0) }
         };
 
-        private readonly Dictionary<Vector2Int, Chunk> chunks = new Dictionary<Vector2Int, Chunk>();
+        private const float AtlasCellCount = 4f;
+        private const float AtlasCellInset = 1f / 512f;
+
+        private readonly Dictionary<Vector2Int, ChunkView> views = new Dictionary<Vector2Int, ChunkView>();
         private readonly HashSet<Vector2Int> dirtyChunks = new HashSet<Vector2Int>();
+        private readonly HashSet<uint> missingVisuals = new HashSet<uint>();
 
-        private void OnValidate()
+        private GridData data;
+
+        public GridData Data => data;
+
+        public Vector3 CellToWorld(Vector3Int position)
+            => transform.TransformPoint(position);
+
+        public void Bind(GridData gridData)
         {
-            heightLimit = Mathf.Max(1, heightLimit);
-            chunkSize = Mathf.Max(1, chunkSize);
+            Unbind();
+
+            data = gridData ?? throw new ArgumentNullException(nameof(gridData));
+            data.TileChanged += OnTileChanged;
+            data.ChunkLoaded += OnChunkLoaded;
+
+            foreach (Vector2Int chunkPosition in data.ChunkPositions)
+                MarkChunkAndNeighborsDirty(chunkPosition);
         }
 
-        private void PlaceTile(Vector3Int position, TileDefinition tile)
+        public void Unbind()
         {
-            if (tile == null)
-                throw new ArgumentNullException(nameof(tile));
-
-            PlaceTile(position, GetTileRegistry().GetId(tile));
-        }
-
-        private void PlaceTile(Vector3Int position, uint tileId)
-        {
-            if (tileId == 0)
-                throw new ArgumentOutOfRangeException(nameof(tileId), "Tile ID 0 is reserved for an empty cell.");
-
-            ValidateHeight(position.y);
-            GetTileRegistry().GetDefinition(tileId);
-
-            Vector2Int chunkPosition = GetChunkPosition(position);
-            if (!chunks.TryGetValue(chunkPosition, out Chunk chunk))
+            if (data != null)
             {
-                chunk = CreateChunk(chunkPosition);
-                chunks.Add(chunkPosition, chunk);
+                data.TileChanged -= OnTileChanged;
+                data.ChunkLoaded -= OnChunkLoaded;
+                data = null;
             }
 
-            Vector3Int localPosition = GetLocalPosition(position);
-            if (chunk.Tiles.TryGetValue(localPosition, out uint currentTileId)
-                && currentTileId == tileId)
-                return;
+            foreach (ChunkView view in views.Values)
+                DestroyView(view);
 
-            chunk.Tiles[localPosition] = tileId;
+            views.Clear();
+            dirtyChunks.Clear();
+        }
+
+        private void OnDestroy()
+        {
+            Unbind();
+        }
+
+        private void OnTileChanged(Vector3Int position, uint tileId)
+        {
             MarkAffectedChunksDirty(position);
         }
 
-        private bool RemoveTileAt(Vector3Int position)
+        private void OnChunkLoaded(Vector2Int chunkPosition)
         {
-            ValidateHeight(position.y);
-
-            Vector2Int chunkPosition = GetChunkPosition(position);
-            if (!chunks.TryGetValue(chunkPosition, out Chunk chunk)
-                || !chunk.Tiles.Remove(GetLocalPosition(position)))
-                return false;
-
-            MarkAffectedChunksDirty(position);
-            return true;
+            MarkChunkAndNeighborsDirty(chunkPosition);
         }
 
-        private bool TryReadTileId(Vector3Int position, out uint tileId)
+        private void MarkChunkAndNeighborsDirty(Vector2Int chunkPosition)
         {
-            tileId = 0;
-            if (position.y < 0 || position.y >= heightLimit)
-                return false;
-
-            Vector2Int chunkPosition = GetChunkPosition(position);
-            if (!chunks.TryGetValue(chunkPosition, out Chunk chunk))
-                return false;
-
-            return chunk.Tiles.TryGetValue(GetLocalPosition(position), out tileId);
-        }
-
-        private bool TryReadTile(Vector3Int position, out TileDefinition tile)
-        {
-            tile = null;
-            if (!TryReadTileId(position, out uint tileId))
-                return false;
-
-            tile = GetTileRegistry().GetDefinition(tileId);
-            return true;
-        }
-
-        private TileRegistry GetTileRegistry()
-        {
-            return TileRegistry.Instance;
-        }
-
-        private Chunk CreateChunk(Vector2Int position)
-        {
-            var chunkObject = new GameObject($"Chunk ({position.x}, {position.y})");
-            chunkObject.transform.SetParent(transform, false);
-            chunkObject.transform.localPosition = new Vector3(
-                (float)position.x * chunkSize,
-                0,
-                (float)position.y * chunkSize);
-
-            var chunk = new Chunk(chunkObject);
-            chunk.MeshFilter.sharedMesh = new Mesh
+            for (int x = -1; x <= 1; x++)
             {
-                name = chunkObject.name,
-                indexFormat = IndexFormat.UInt32
-            };
-            chunk.MeshFilter.sharedMesh.MarkDynamic();
-            return chunk;
+                for (int z = -1; z <= 1; z++)
+                    dirtyChunks.Add(new Vector2Int(chunkPosition.x + x, chunkPosition.y + z));
+            }
         }
 
         private void MarkAffectedChunksDirty(Vector3Int position)
@@ -138,30 +104,39 @@ namespace Episeanter.Grids
                 for (int z = -1; z <= 1; z++)
                 {
                     if (TryGetNeighborPosition(position, new Vector3Int(x, 0, z), out Vector3Int neighbor))
-                        dirtyChunks.Add(GetChunkPosition(neighbor));
+                        dirtyChunks.Add(data.GetChunkPosition(neighbor));
                 }
             }
         }
 
         private void LateUpdate()
         {
+            if (data == null || dirtyChunks.Count == 0)
+                return;
+
             foreach (Vector2Int chunkPosition in dirtyChunks)
-            {
-                if (chunks.TryGetValue(chunkPosition, out Chunk chunk))
-                    RebuildChunk(chunkPosition, chunk);
-            }
+                RebuildChunk(chunkPosition);
 
             dirtyChunks.Clear();
         }
 
-        private void RebuildChunk(Vector2Int position, Chunk chunk)
+        private void RebuildChunk(Vector2Int position)
         {
-            if (chunk.Tiles.Count == 0)
+            if (!data.TryGetChunkTiles(position, out Dictionary<Vector3Int, uint> tiles) || tiles.Count == 0)
             {
-                chunks.Remove(position);
-                DestroyUnityObject(chunk.GameObject);
-                DestroyUnityObject(chunk.MeshFilter.sharedMesh);
+                if (views.TryGetValue(position, out ChunkView oldView))
+                {
+                    views.Remove(position);
+                    DestroyView(oldView);
+                }
+
                 return;
+            }
+
+            if (!views.TryGetValue(position, out ChunkView chunk))
+            {
+                chunk = CreateView(position);
+                views.Add(position, chunk);
             }
 
             List<Vector3> vertices = chunk.Vertices;
@@ -178,20 +153,26 @@ namespace Episeanter.Grids
             for (int i = 0; i < trianglesByMaterial.Count; i++)
                 trianglesByMaterial[i].Clear();
 
-            foreach (KeyValuePair<Vector3Int, uint> tileEntry in chunk.Tiles)
+            foreach (KeyValuePair<Vector3Int, uint> tileEntry in tiles)
             {
-                TileDefinition definition = GetTileRegistry().GetDefinition(tileEntry.Value);
+                if (visuals == null || !visuals.TryGetMaterials(tileEntry.Value, out Material topMaterial, out Material sideMaterial))
+                {
+                    if (missingVisuals.Add(tileEntry.Value))
+                        Debug.LogWarning($"No visuals registered in TileVisuals for tile ID {tileEntry.Value}.", this);
+                    continue;
+                }
+
+                Vector3Int globalPosition = data.GetGlobalPosition(position, tileEntry.Key);
                 for (int face = 0; face < NeighborOffsets.Length; face++)
                 {
                     if (face == 3)
                         continue;
 
-                    Vector3Int globalPosition = GetGlobalPosition(position, tileEntry.Key);
                     if (TryGetNeighborPosition(globalPosition, NeighborOffsets[face], out Vector3Int neighbor)
-                        && TryReadTileId(neighbor, out _))
+                        && data.TryGetTileId(neighbor, out _))
                         continue;
 
-                    Material material = face == 2 ? definition.Material : definition.SideMaterial;
+                    Material material = face == 2 ? topMaterial : sideMaterial;
                     if (!materialIndices.TryGetValue(material, out int materialIndex))
                     {
                         materialIndex = materials.Count;
@@ -222,12 +203,37 @@ namespace Episeanter.Grids
                 mesh.SetTriangles(trianglesByMaterial[i], i);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
-            chunk.MeshCollider.sharedMesh = mesh;
+            chunk.MeshCollider.sharedMesh = materials.Count > 0 ? mesh : null;
             if (!chunk.HasSameMaterials(materials))
             {
                 chunk.RendererMaterials = materials.ToArray();
                 chunk.MeshRenderer.sharedMaterials = chunk.RendererMaterials;
             }
+        }
+
+        private ChunkView CreateView(Vector2Int position)
+        {
+            var chunkObject = new GameObject($"Chunk ({position.x}, {position.y})");
+            chunkObject.transform.SetParent(transform, false);
+            chunkObject.transform.localPosition = new Vector3(
+                (float)position.x * data.ChunkSize,
+                0,
+                (float)position.y * data.ChunkSize);
+
+            var view = new ChunkView(chunkObject);
+            view.MeshFilter.sharedMesh = new Mesh
+            {
+                name = chunkObject.name,
+                indexFormat = IndexFormat.UInt32
+            };
+            view.MeshFilter.sharedMesh.MarkDynamic();
+            return view;
+        }
+
+        private static void DestroyView(ChunkView view)
+        {
+            DestroyUnityObject(view.MeshFilter.sharedMesh);
+            DestroyUnityObject(view.GameObject);
         }
 
         private void AddDualGridFace(
@@ -255,16 +261,21 @@ namespace Episeanter.Grids
                     (previous + corner) * 0.5f
                 };
 
-                int mask = GetDualGridMask(globalPosition, corner, uAxis, vAxis, tileId);
-                int atlasColumn = mask % 4;
-                int atlasRow = mask / 4;
+                int filledMask = GetDualGridMask(globalPosition, corner, uAxis, vAxis, tileId);
+                int mask = filledMask ^ 0xF;
+                int atlasColumn = mask & 3;
+                int atlasRow = mask >> 2;
+                int cornerU = Mathf.RoundToInt(GetAxisValue(corner, uAxis));
+                int cornerV = Mathf.RoundToInt(GetAxisValue(corner, vAxis));
                 int firstVertex = vertices.Count;
                 for (int i = 0; i < patch.Length; i++)
                 {
                     vertices.Add(tilePosition + patch[i]);
+                    float cellU = InsetAtlasCell(GetAxisValue(patch[i], uAxis) - cornerU + 0.5f);
+                    float cellV = InsetAtlasCell(GetAxisValue(patch[i], vAxis) - cornerV + 0.5f);
                     uv.Add(new Vector2(
-                        (atlasColumn + GetAxisValue(patch[i], uAxis)) * 0.25f,
-                        (atlasRow + GetAxisValue(patch[i], vAxis)) * 0.25f));
+                        (atlasColumn + cellU) / AtlasCellCount,
+                        (atlasRow + cellV) / AtlasCellCount));
                 }
 
                 triangles.Add(firstVertex);
@@ -295,7 +306,7 @@ namespace Episeanter.Grids
                 SetAxisValue(ref offset, vAxis, GetCornerOffset(cornerV, directionV));
 
                 if (TryGetNeighborPosition(globalPosition, offset, out Vector3Int neighbor)
-                    && TryReadTileId(neighbor, out uint neighborTileId)
+                    && data.TryGetTileId(neighbor, out uint neighborTileId)
                     && neighborTileId == tileId)
                 {
                     mask |= 1 << bit;
@@ -304,6 +315,9 @@ namespace Episeanter.Grids
 
             return mask;
         }
+
+        private static float InsetAtlasCell(float value)
+            => Mathf.Lerp(AtlasCellInset, 1f - AtlasCellInset, value);
 
         private static int GetCornerOffset(int cornerCoordinate, int direction)
         {
@@ -372,41 +386,6 @@ namespace Episeanter.Grids
             return true;
         }
 
-        private Vector3Int GetGlobalPosition(Vector2Int chunkPosition, Vector3Int localPosition)
-        {
-            long x = (long)chunkPosition.x * chunkSize + localPosition.x;
-            long z = (long)chunkPosition.y * chunkSize + localPosition.z;
-            return new Vector3Int((int)x, localPosition.y, (int)z);
-        }
-
-        private Vector2Int GetChunkPosition(Vector3Int position)
-        {
-            return new Vector2Int(FloorDiv(position.x, chunkSize), FloorDiv(position.z, chunkSize));
-        }
-
-        private Vector3Int GetLocalPosition(Vector3Int position)
-        {
-            return new Vector3Int(PositiveMod(position.x, chunkSize), position.y, PositiveMod(position.z, chunkSize));
-        }
-
-        private static int FloorDiv(int value, int divisor)
-        {
-            int quotient = value / divisor;
-            return value % divisor < 0 ? quotient - 1 : quotient;
-        }
-
-        private static int PositiveMod(int value, int divisor)
-        {
-            int remainder = value % divisor;
-            return remainder < 0 ? remainder + divisor : remainder;
-        }
-
-        private void ValidateHeight(int y)
-        {
-            if (y < 0 || y >= heightLimit)
-                throw new ArgumentOutOfRangeException(nameof(y), y, $"Tile height must be between 0 and {heightLimit - 1}.");
-        }
-
         private static void DestroyUnityObject(UnityEngine.Object target)
         {
             if (target == null)
@@ -418,25 +397,12 @@ namespace Episeanter.Grids
                 DestroyImmediate(target);
         }
 
-        private void OnDestroy()
-        {
-            foreach (Chunk chunk in chunks.Values)
-            {
-                DestroyUnityObject(chunk.MeshFilter.sharedMesh);
-                DestroyUnityObject(chunk.GameObject);
-            }
-
-            chunks.Clear();
-            dirtyChunks.Clear();
-        }
-
-        private sealed class Chunk
+        private sealed class ChunkView
         {
             public readonly GameObject GameObject;
             public readonly MeshFilter MeshFilter;
             public readonly MeshRenderer MeshRenderer;
             public readonly MeshCollider MeshCollider;
-            public readonly Dictionary<Vector3Int, uint> Tiles = new Dictionary<Vector3Int, uint>();
             public readonly List<Vector3> Vertices = new List<Vector3>();
             public readonly List<Vector2> Uv = new List<Vector2>();
             public readonly List<Material> Materials = new List<Material>();
@@ -444,7 +410,7 @@ namespace Episeanter.Grids
             public readonly List<List<int>> TrianglesByMaterial = new List<List<int>>();
             public Material[] RendererMaterials = Array.Empty<Material>();
 
-            public Chunk(GameObject gameObject)
+            public ChunkView(GameObject gameObject)
             {
                 GameObject = gameObject;
                 MeshFilter = gameObject.AddComponent<MeshFilter>();
