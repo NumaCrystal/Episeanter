@@ -185,15 +185,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -4.97
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -711
+      value: -5
       objectReference: {fileID: 0}
     - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 1410
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -445,7 +445,7 @@ Light:
     m_CustomResolution: -1
     m_Strength: 1
     m_Bias: 0.05
-    m_NormalBias: 0.4
+    m_NormalBias: 0
     m_NearPlane: 0.2
     m_CullingMatrixOverride:
       e00: 1
@@ -515,7 +515,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UsePipelineSettings: 1
+  m_UsePipelineSettings: 0
   m_AdditionalLightsShadowResolutionTier: 2
   m_CustomShadowLayers: 0
   m_LightCookieSize: {x: 1, y: 1}
