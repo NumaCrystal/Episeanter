@@ -52,26 +52,29 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Alpha: 0.9
+    - _Alpha: 1
     - _Axis: 0
     - _BUILTIN_QueueControl: -1
     - _BUILTIN_QueueOffset: 0
     - _Distortion: 0.35
     - _EdgePower: 2.2
     - _EdgeStrength: 0.65
-    - _EdgeWidth: 0.08
-    - _FlowSpeed: 0.4
+    - _EdgeWidth: 0.078
+    - _FlowSpeed: 0.05
     - _FoamScale: 1.2
     - _FoamStrength: 0.8
     - _FoamThreshold: 0.68
     - _FoamWidth: 0.06
-    - _PixelDensity: 16
+    - _IntersectionFoamDepth: 0
+    - _IntersectionFoamStrength: 1
+    - _IntersectionFoamWidth: 1
+    - _PixelDensity: 32
     - _PixelSize: 16
     - _QueueControl: 0
     - _QueueOffset: 0
     - _Scale: 0.5
     - _Speed: 0.4
-    - _Steps: 8
+    - _Steps: 4.01
     - _WarpScale: 0.8
     - _WaveFrequency: 1.7
     - _WaveHighlight: 0.18
@@ -84,6 +87,7 @@ Material:
     - _EdgeColor: {r: 0.65, g: 0.95, b: 0.88, a: 1}
     - _FlowDirection: {r: 1, g: 0, b: 0, a: 0}
     - _FoamColor: {r: 0.48380208, g: 0.6733843, b: 0.6792453, a: 1}
+    - _ObjectFoamColor: {r: 0.9, g: 1, b: 0.95, a: 1}
     - _ShallowColor: {r: 0.025, g: 0.42, b: 0.5, a: 1}
     - _WaveColor: {r: 0.19999996, g: 0.72, b: 0.72, a: 1}
   m_BuildTextureStacks: []

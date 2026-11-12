@@ -5,11 +5,11 @@
   <Project Path="Mirror.Components.csproj" />
   <Project Path="Mirror.Editor.csproj" />
   <Project Path="kcp2k.csproj" />
+  <Project Path="Episeanter.Content.Client.csproj" />
   <Project Path="Mirror.csproj" />
   <Project Path="SimpleWebTransport.csproj" />
   <Project Path="Mirror.Authenticators.csproj" />
   <Project Path="EncryptionTransportEditor.csproj" />
-  <Project Path="Episeanter.Content.Client.csproj" />
   <Project Path="Telepathy.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Episeanter.Content.Shared.csproj" />
