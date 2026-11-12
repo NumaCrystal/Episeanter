@@ -262,7 +262,6 @@ namespace Episeanter.Content.Client.Maps
                 };
 
                 int filledMask = GetDualGridMask(globalPosition, corner, uAxis, vAxis, tileId);
-                // DualGridAtlas cells are indexed by empty quadrants (bit 0 BL, 1 BR, 2 TL, 3 TR).
                 int mask = filledMask ^ 0xF;
                 int atlasColumn = mask & 3;
                 int atlasRow = mask >> 2;

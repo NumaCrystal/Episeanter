@@ -185,15 +185,15 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1.74
+      value: -4.97
       objectReference: {fileID: 0}
     - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 21.12
+      value: -711
       objectReference: {fileID: 0}
     - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -31.78
+      value: 1410
       objectReference: {fileID: 0}
     - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_LocalRotation.w
@@ -823,7 +823,7 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   settings: {fileID: 11400000, guid: 2b481094262b4244c850552ee6abebde, type: 2}
-  gridRenderer: {fileID: 0}
+  gridRenderer: {fileID: 2131881876}
 --- !u!114 &2131881876
 MonoBehaviour:
   m_ObjectHideFlags: 0

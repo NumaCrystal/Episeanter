@@ -66,11 +66,7 @@ namespace Episeanter.Content.Client.Maps
                 return;
 
             if (!Data.ImportChunk(message.ChunkPosition, message.Ids))
-            {
-                Debug.LogError(
-                    $"Chunk {message.ChunkPosition} has an unexpected size. " +
-                    "Check that GridSettings are identical on client and server.", this);
-            }
+                return;
         }
 
         private void OnTilesChanged(TilesChangedMessage message)
