@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Episeanter.Grids
+namespace Episeanter.Content.Shared.Maps
 {
-    /// <summary>Maps persistent, non-zero tile IDs to definitions; keep IDs stable across saves and network peers.</summary>
     [DisallowMultipleComponent]
     public sealed class TileRegistry : MonoBehaviour
     {
@@ -14,6 +13,7 @@ namespace Episeanter.Grids
 
         private Dictionary<uint, TileDefinition> definitionsById;
         private Dictionary<TileDefinition, uint> idsByDefinition;
+        private uint hash;
 
         public static TileRegistry Instance
         {
@@ -26,11 +26,19 @@ namespace Episeanter.Grids
             }
         }
 
+        public uint Hash
+        {
+            get
+            {
+                EnsureLookup();
+                return hash;
+            }
+        }
+
         private void Awake()
         {
             if (instance != null && instance != this)
             {
-                Debug.LogError($"Duplicate tile registry '{name}' found. Destroying the duplicate.", this);
                 Destroy(gameObject);
                 return;
             }
@@ -114,14 +122,40 @@ namespace Episeanter.Grids
                     throw new InvalidOperationException($"Tile registry '{name}' contains duplicate tile ID {entry.Id}.");
                 if (!newIdsByDefinition.TryAdd(entry.Definition, entry.Id))
                     throw new InvalidOperationException($"Tile '{entry.Definition.name}' appears more than once in registry '{name}'.");
-                if (entry.Definition.Material == null)
-                    throw new InvalidOperationException($"Tile '{entry.Definition.name}' in registry '{name}' has no material.");
-
-                entry.Definition.ValidateTextureAtlases();
             }
 
             definitionsById = newDefinitionsById;
             idsByDefinition = newIdsByDefinition;
+            hash = ComputeHash(newDefinitionsById);
+        }
+
+        private static uint ComputeHash(Dictionary<uint, TileDefinition> definitions)
+        {
+            var ids = new List<uint>(definitions.Keys);
+            ids.Sort();
+
+            uint h = 2166136261u;
+            foreach (uint id in ids)
+            {
+                h = Mix(h, id);
+                string definitionName = definitions[id].name;
+                for (int i = 0; i < definitionName.Length; i++)
+                    h = Mix(h, definitionName[i]);
+            }
+
+            return h;
+        }
+
+        private static uint Mix(uint h, uint value)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                h ^= value & 0xFFu;
+                h *= 16777619u;
+                value >>= 8;
+            }
+
+            return h;
         }
 
         [Serializable]

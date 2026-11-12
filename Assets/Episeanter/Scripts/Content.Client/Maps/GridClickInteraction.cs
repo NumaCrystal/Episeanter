@@ -1,17 +1,23 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Episeanter.Grids
+namespace Episeanter.Content.Client.Maps
 {
     [DisallowMultipleComponent]
     public sealed class GridClickInteraction : MonoBehaviour
     {
         private const float CellOffset = 0.001f;
 
-        [SerializeField] private Camera targetCamera;
-        [SerializeField, Min(0.01f)] private float maxDistance = 100f;
-        [SerializeField] private LayerMask interactionLayers = Physics.DefaultRaycastLayers;
-        [SerializeField, Min(1), Tooltip("Tile registry ID used for placement.")]
+        [SerializeField] 
+        private Camera targetCamera;
+
+        [SerializeField, Min(0.01f)] 
+        private float maxDistance = 100f;
+
+        [SerializeField] 
+        private LayerMask interactionLayers = Physics.DefaultRaycastLayers;
+
+        [SerializeField, Min(1)]
         private uint tileId = 1;
 
         private Camera cachedCamera;
@@ -23,10 +29,7 @@ namespace Episeanter.Grids
                 cachedCamera = Camera.main;
 
             if (cachedCamera == null)
-            {
-                Debug.LogError("GridClickInteraction requires a camera on this object or a MainCamera in the scene.", this);
                 enabled = false;
-            }
         }
 
         private void Update()
@@ -47,27 +50,23 @@ namespace Episeanter.Grids
             if (!Physics.Raycast(ray, out RaycastHit hit, maxDistance, interactionLayers, QueryTriggerInteraction.Ignore))
                 return;
 
-            Grid grid = hit.collider.GetComponentInParent<Grid>();
-            if (grid == null)
+            ClientGridSystem clientGrid = hit.collider.GetComponentInParent<ClientGridSystem>();
+            if (clientGrid == null || clientGrid.Data == null)
                 return;
 
-            Vector3 localNormal = grid.transform.localToWorldMatrix.transpose
+            Transform gridTransform = clientGrid.transform;
+            Vector3 localNormal = gridTransform.localToWorldMatrix.transpose
                 .MultiplyVector(hit.normal)
                 .normalized;
             Vector3Int faceNormal = GetFaceNormal(localNormal);
-            Vector3 localHitPoint = grid.transform.InverseTransformPoint(hit.point);
+            Vector3 localHitPoint = gridTransform.InverseTransformPoint(hit.point);
             Vector3 offset = (Vector3)faceNormal * (place ? CellOffset : -CellOffset);
             Vector3Int cell = Vector3Int.FloorToInt(localHitPoint + offset);
 
             if (place)
-            {
-                if (cell.y >= 0 && cell.y < grid.HeightLimit)
-                    grid.SetTile(cell, tileId);
-            }
+                clientGrid.RequestPlace(cell, tileId);
             else
-            {
-                grid.RemoveTile(cell);
-            }
+                clientGrid.RequestRemove(cell);
         }
 
         private static Vector3Int GetFaceNormal(Vector3 normal)
@@ -85,8 +84,6 @@ namespace Episeanter.Grids
         }
 
         private void OnValidate()
-        {
-            maxDistance = Mathf.Max(0.01f, maxDistance);
-        }
+            => maxDistance = Mathf.Max(0.01f, maxDistance);
     }
 }
