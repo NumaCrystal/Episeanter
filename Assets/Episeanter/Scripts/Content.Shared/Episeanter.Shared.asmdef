@@ -1,0 +1,16 @@
+{
+    "name": "Episeanter.Content.Shared",
+    "rootNamespace": "Episeanter.Content.Shared",
+    "references": [
+        "Mirror"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
