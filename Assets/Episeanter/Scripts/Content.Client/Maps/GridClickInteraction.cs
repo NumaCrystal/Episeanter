@@ -1,3 +1,4 @@
+using Episeanter.Content.Shared.Maps;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -8,19 +9,16 @@ namespace Episeanter.Content.Client.Maps
     {
         private const float CellOffset = 0.001f;
 
-        [SerializeField] 
-        private Camera targetCamera;
-
-        [SerializeField, Min(0.01f)] 
-        private float maxDistance = 100f;
-
-        [SerializeField] 
-        private LayerMask interactionLayers = Physics.DefaultRaycastLayers;
-
-        [SerializeField, Min(1)]
-        private uint tileId = 1;
+        [SerializeField] private Camera targetCamera;
+        [SerializeField, Min(0.01f)] private float maxDistance = 100f;
+        [SerializeField, Min(0.01f)] private float damagePerHit = 10f;
+        [SerializeField] private LayerMask interactionLayers = Physics.DefaultRaycastLayers;
+        [SerializeField, Min(1), Tooltip("Tile registry IDs cycled through with the mouse wheel.")]
+        private uint[] tileIdsForTesting = { 1, 2 };
 
         private Camera cachedCamera;
+        private ClientGridSystem fallbackSystem;
+        private int selectedTileIndex;
 
         private void Awake()
         {
@@ -29,7 +27,12 @@ namespace Episeanter.Content.Client.Maps
                 cachedCamera = Camera.main;
 
             if (cachedCamera == null)
+            {
+                Debug.LogError("GridClickInteraction requires a camera on this object or a MainCamera in the scene.", this);
                 enabled = false;
+            }
+
+            fallbackSystem = FindAnyObjectByType<ClientGridSystem>();
         }
 
         private void Update()
@@ -38,35 +41,165 @@ namespace Episeanter.Content.Client.Maps
             if (mouse == null)
                 return;
 
-            if (mouse.leftButton.wasPressedThisFrame)
-                Interact(place: false);
-            else if (mouse.rightButton.wasPressedThisFrame)
-                Interact(place: true);
+            HandleTileSwitch(mouse);
+
+            if (mouse.rightButton.wasPressedThisFrame)
+                TryPlace(mouse);
+            else if (mouse.leftButton.wasPressedThisFrame)
+                TryDamage(mouse);
         }
 
-        private void Interact(bool place)
+        private void HandleTileSwitch(Mouse mouse)
         {
-            Ray ray = cachedCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-            if (!Physics.Raycast(ray, out RaycastHit hit, maxDistance, interactionLayers, QueryTriggerInteraction.Ignore))
+            if (tileIdsForTesting == null || tileIdsForTesting.Length == 0)
                 return;
 
-            ClientGridSystem clientGrid = hit.collider.GetComponentInParent<ClientGridSystem>();
-            if (clientGrid == null || clientGrid.Data == null)
+            float scroll = mouse.scroll.ReadValue().y;
+            if (scroll == 0f)
                 return;
 
-            Transform gridTransform = clientGrid.transform;
-            Vector3 localNormal = gridTransform.localToWorldMatrix.transpose
-                .MultiplyVector(hit.normal)
-                .normalized;
+            selectedTileIndex = (selectedTileIndex + (scroll > 0f ? 1 : -1) +
+                                 tileIdsForTesting.Length) % tileIdsForTesting.Length;
+        }
+
+        private void TryPlace(Mouse mouse)
+        {
+            if (!TryRaycastGrid(mouse, out RaycastHit hit, out ClientGridSystem system))
+            {
+                TryPlaceOnEmptySpace(mouse);
+                return;
+            }
+
+            if (!TryGetSelectedTileId(out uint tileId))
+                return;
+
+            GridData data = system.Data;
+            if (data == null)
+                return;
+
+            Transform gridTransform = system.transform;
+            Vector3 localNormal = GetLocalNormal(gridTransform, hit.normal);
             Vector3Int faceNormal = GetFaceNormal(localNormal);
             Vector3 localHitPoint = gridTransform.InverseTransformPoint(hit.point);
-            Vector3 offset = (Vector3)faceNormal * (place ? CellOffset : -CellOffset);
-            Vector3Int cell = Vector3Int.FloorToInt(localHitPoint + offset);
+            bool clickedSide = new Vector2(localNormal.x, localNormal.z).sqrMagnitude >
+                               localNormal.y * localNormal.y;
 
-            if (place)
-                clientGrid.RequestPlace(cell, tileId);
+            Vector3Int cell;
+            if (clickedSide)
+            {
+                cell = Vector3Int.FloorToInt(
+                    localHitPoint - (Vector3)faceNormal * CellOffset) + faceNormal;
+            }
             else
-                clientGrid.RequestRemove(cell);
+            {
+                cell = new Vector3Int(
+                    Mathf.FloorToInt(localHitPoint.x),
+                    0,
+                    Mathf.FloorToInt(localHitPoint.z));
+                cell.y = data.GetTileId(cell) == 0 ? 0 : 1;
+            }
+
+            if (!data.InBounds(cell))
+                return;
+
+            system.RequestPlace(cell, tileId);
+        }
+
+        /// <summary>
+        /// Places a tile on the grid plane where nothing was hit. The grid is one unbounded world,
+        /// so a cell next to existing tiles and a cell far away are handled the same way.
+        /// </summary>
+        private void TryPlaceOnEmptySpace(Mouse mouse)
+        {
+            if (!TryGetSelectedTileId(out uint tileId))
+                return;
+
+            if (fallbackSystem == null)
+                fallbackSystem = FindAnyObjectByType<ClientGridSystem>();
+            if (fallbackSystem == null || fallbackSystem.Data == null)
+                return;
+
+            GridData data = fallbackSystem.Data;
+            Transform gridTransform = fallbackSystem.transform;
+            Ray ray = cachedCamera.ScreenPointToRay(mouse.position.ReadValue());
+            Plane placementPlane = new Plane(gridTransform.up, gridTransform.position);
+            if (!placementPlane.Raycast(ray, out float distance) ||
+                distance < 0f || distance > maxDistance)
+                return;
+
+            Vector3 localPoint = gridTransform.InverseTransformPoint(ray.GetPoint(distance));
+            Vector3Int cell = new Vector3Int(
+                Mathf.FloorToInt(localPoint.x),
+                0,
+                Mathf.FloorToInt(localPoint.z));
+            cell.y = data.GetTileId(cell) == 0 ? 0 : 1;
+
+            if (!data.InBounds(cell))
+                return;
+
+            fallbackSystem.RequestPlace(cell, tileId);
+        }
+
+        private void TryDamage(Mouse mouse)
+        {
+            if (!TryRaycastGrid(mouse, out RaycastHit hit, out ClientGridSystem system))
+                return;
+
+            GridData data = system.Data;
+            if (data == null)
+                return;
+
+            Transform gridTransform = system.transform;
+            Vector3 localNormal = GetLocalNormal(gridTransform, hit.normal);
+            Vector3Int faceNormal = GetFaceNormal(localNormal);
+            Vector3 localHitPoint = gridTransform.InverseTransformPoint(hit.point);
+            Vector3Int cell = Vector3Int.FloorToInt(
+                localHitPoint - (Vector3)faceNormal * CellOffset);
+
+            if (!data.InBounds(cell))
+                return;
+
+            system.RequestDamage(cell, damagePerHit);
+        }
+
+        private bool TryRaycastGrid(Mouse mouse, out RaycastHit hit, out ClientGridSystem system)
+        {
+            hit = default;
+            system = null;
+            Ray ray = cachedCamera.ScreenPointToRay(mouse.position.ReadValue());
+            if (!Physics.Raycast(
+                    ray,
+                    out hit,
+                    maxDistance,
+                    interactionLayers,
+                    QueryTriggerInteraction.Ignore))
+                return false;
+
+            system = hit.collider.GetComponentInParent<ClientGridSystem>();
+            if (system == null)
+                return false;
+
+            return true;
+        }
+
+        private bool TryGetSelectedTileId(out uint tileId)
+        {
+            tileId = 0;
+            if (tileIdsForTesting == null || tileIdsForTesting.Length == 0)
+                return false;
+
+            selectedTileIndex = Mathf.Clamp(selectedTileIndex, 0, tileIdsForTesting.Length - 1);
+            tileId = tileIdsForTesting[selectedTileIndex];
+            if (tileId != 0)
+                return true;
+
+            Debug.LogWarning("Tile ID 0 is reserved for empty cells.", this);
+            return false;
+        }
+
+        private static Vector3 GetLocalNormal(Transform gridTransform, Vector3 worldNormal)
+        {
+            return gridTransform.localToWorldMatrix.transpose.MultiplyVector(worldNormal).normalized;
         }
 
         private static Vector3Int GetFaceNormal(Vector3 normal)
@@ -83,7 +216,22 @@ namespace Episeanter.Content.Client.Maps
             return new Vector3Int(0, 0, normal.z >= 0f ? 1 : -1);
         }
 
+        private void OnGUI()
+        {
+            if (tileIdsForTesting == null || tileIdsForTesting.Length == 0)
+                return;
+
+            selectedTileIndex = Mathf.Clamp(selectedTileIndex, 0, tileIdsForTesting.Length - 1);
+            GUI.Label(
+                new Rect(10, 10, 500, 20),
+                $"ПКМ: поставить (id={tileIdsForTesting[selectedTileIndex]}) | " +
+                $"ЛКМ: нанести {damagePerHit} урона | Колесо: сменить id | пустота: поставить тайл на плоскость грида");
+        }
+
         private void OnValidate()
-            => maxDistance = Mathf.Max(0.01f, maxDistance);
+        {
+            maxDistance = Mathf.Max(0.01f, maxDistance);
+            damagePerHit = Mathf.Max(0.01f, damagePerHit);
+        }
     }
 }

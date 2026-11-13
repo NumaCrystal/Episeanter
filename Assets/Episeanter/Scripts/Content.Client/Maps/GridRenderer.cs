@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Episeanter.Content.Shared.Maps;
+using Mirror;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -10,6 +11,9 @@ namespace Episeanter.Content.Client.Maps
     public sealed class GridRenderer : MonoBehaviour
     {
         [SerializeField] private TileVisuals visuals;
+        [SerializeField] private Material damageLayerMaterial;
+        [SerializeField, Tooltip("Builds MeshColliders for chunk meshes (used for raycasts). Skipped automatically when the grid has a non-kinematic Rigidbody, because non-convex mesh colliders are not allowed on dynamic bodies.")]
+        private bool generateMeshColliders = true;
 
         private static readonly Vector3Int[] NeighborOffsets =
         {
@@ -39,18 +43,31 @@ namespace Episeanter.Content.Client.Maps
         private readonly HashSet<uint> missingVisuals = new HashSet<uint>();
 
         private GridData data;
+        private Rigidbody body;
+        private int damageStageCount = 1;
+        private float damageLayerHalfTexelU;
+        private bool damageOverlayReady;
 
         public GridData Data => data;
 
+        private bool UseMeshCollider => generateMeshColliders && (body == null || body.isKinematic);
+
         public Vector3 CellToWorld(Vector3Int position)
             => transform.TransformPoint(position);
+
+        private void Awake()
+        {
+            body = GetComponent<Rigidbody>();
+        }
 
         public void Bind(GridData gridData)
         {
             Unbind();
 
             data = gridData ?? throw new ArgumentNullException(nameof(gridData));
+            RefreshDamageOverlay();
             data.TileChanged += OnTileChanged;
+            data.HealthChanged += OnHealthChanged;
             data.ChunkLoaded += OnChunkLoaded;
 
             foreach (Vector2Int chunkPosition in data.ChunkPositions)
@@ -62,6 +79,7 @@ namespace Episeanter.Content.Client.Maps
             if (data != null)
             {
                 data.TileChanged -= OnTileChanged;
+                data.HealthChanged -= OnHealthChanged;
                 data.ChunkLoaded -= OnChunkLoaded;
                 data = null;
             }
@@ -78,9 +96,20 @@ namespace Episeanter.Content.Client.Maps
             Unbind();
         }
 
+        private void OnValidate()
+        {
+            if (Application.isPlaying && isActiveAndEnabled && data != null)
+                RefreshDamageOverlay();
+        }
+
         private void OnTileChanged(Vector3Int position, uint tileId)
         {
             MarkAffectedChunksDirty(position);
+        }
+
+        private void OnHealthChanged(Vector3Int position, float health)
+        {
+            dirtyChunks.Add(data.GetChunkPosition(position));
         }
 
         private void OnChunkLoaded(Vector2Int chunkPosition)
@@ -203,12 +232,16 @@ namespace Episeanter.Content.Client.Maps
                 mesh.SetTriangles(trianglesByMaterial[i], i);
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
-            chunk.MeshCollider.sharedMesh = materials.Count > 0 ? mesh : null;
+            bool meshCollider = UseMeshCollider;
+            chunk.MeshCollider.enabled = meshCollider;
+            chunk.MeshCollider.sharedMesh = meshCollider && materials.Count > 0 ? mesh : null;
             if (!chunk.HasSameMaterials(materials))
             {
                 chunk.RendererMaterials = materials.ToArray();
                 chunk.MeshRenderer.sharedMaterials = chunk.RendererMaterials;
             }
+
+            RebuildDamageMesh(position, chunk, tiles);
         }
 
         private ChunkView CreateView(Vector2Int position)
@@ -233,8 +266,179 @@ namespace Episeanter.Content.Client.Maps
         private static void DestroyView(ChunkView view)
         {
             DestroyUnityObject(view.MeshFilter.sharedMesh);
+            DestroyUnityObject(view.DamageMeshFilter.sharedMesh);
             DestroyUnityObject(view.GameObject);
         }
+
+        #region Damage overlay
+
+        /// <summary>
+        /// Reads the damage layer material (a horizontal strip of square damage frames)
+        /// and schedules every chunk for a rebuild.
+        /// </summary>
+        private void RefreshDamageOverlay()
+        {
+            damageOverlayReady = false;
+            damageStageCount = 1;
+            damageLayerHalfTexelU = 0f;
+
+            if (damageLayerMaterial != null)
+            {
+                Texture texture = damageLayerMaterial.HasProperty("_BaseMap")
+                    ? damageLayerMaterial.GetTexture("_BaseMap")
+                    : null;
+                if (texture == null && damageLayerMaterial.HasProperty("_MainTex"))
+                    texture = damageLayerMaterial.GetTexture("_MainTex");
+
+                if (texture == null)
+                {
+                    Debug.LogError(
+                        $"Damage layer material '{damageLayerMaterial.name}' must have a texture assigned to _BaseMap or _MainTex.",
+                        this);
+                }
+                else if (texture.height <= 0 || texture.width % texture.height != 0)
+                {
+                    Debug.LogError(
+                        $"Damage layer material '{damageLayerMaterial.name}' has a {texture.width}x{texture.height} texture. " +
+                        "Its horizontal damage frames must be square and fill the texture height.",
+                        this);
+                }
+                else
+                {
+                    damageStageCount = texture.width / texture.height;
+                    damageLayerHalfTexelU = 0.5f / texture.width;
+                    damageOverlayReady = true;
+                }
+            }
+
+            foreach (Vector2Int chunkPosition in views.Keys)
+                dirtyChunks.Add(chunkPosition);
+        }
+
+        private int GetDamageStage(float health, float maxHealth)
+        {
+            if (health >= maxHealth)
+                return -1;
+
+            float damageFraction = 1f - health / maxHealth;
+            return Mathf.Clamp(Mathf.FloorToInt(damageFraction * damageStageCount), 0, damageStageCount - 1);
+        }
+
+        private void RebuildDamageMesh(Vector2Int chunkPosition, ChunkView chunk, Dictionary<Vector3Int, uint> tiles)
+        {
+            Mesh mesh = chunk.DamageMeshFilter.sharedMesh;
+            mesh.Clear();
+            chunk.DamageVertices.Clear();
+            chunk.DamageUv.Clear();
+            chunk.DamageTriangles.Clear();
+
+            if (!damageOverlayReady)
+            {
+                chunk.DamageMeshRenderer.enabled = false;
+                return;
+            }
+
+            TileRegistry registry = TileRegistry.Instance;
+            foreach (KeyValuePair<Vector3Int, uint> tileEntry in tiles)
+            {
+                Vector3Int globalPosition = data.GetGlobalPosition(chunkPosition, tileEntry.Key);
+                if (!data.TryGetHealth(globalPosition, out float health)
+                    || !registry.TryGetDefinition(tileEntry.Value, out TileDefinition definition))
+                    continue;
+
+                int stage = GetDamageStage(health, definition.MaxHealth);
+                if (stage < 0)
+                    continue;
+
+                for (int face = 0; face < NeighborOffsets.Length; face++)
+                {
+                    if (face == 3)
+                        continue;
+
+                    if (TryGetNeighborPosition(globalPosition, NeighborOffsets[face], out Vector3Int neighbor)
+                        && data.TryGetTileId(neighbor, out _))
+                        continue;
+
+                    AddDamageFace(
+                        tileEntry.Key,
+                        face,
+                        stage,
+                        chunk.DamageVertices,
+                        chunk.DamageUv,
+                        chunk.DamageTriangles);
+                }
+            }
+
+            if (chunk.DamageTriangles.Count == 0)
+            {
+                chunk.DamageMeshRenderer.enabled = false;
+                return;
+            }
+
+            mesh.SetVertices(chunk.DamageVertices);
+            mesh.SetUVs(0, chunk.DamageUv);
+            mesh.SetTriangles(chunk.DamageTriangles, 0);
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            chunk.DamageMeshRenderer.sharedMaterial = damageLayerMaterial;
+            chunk.DamageMeshRenderer.enabled = true;
+        }
+
+        private void AddDamageFace(
+            Vector3Int tilePosition,
+            int faceIndex,
+            int stage,
+            List<Vector3> vertices,
+            List<Vector2> uv,
+            List<int> triangles)
+        {
+            Vector3[] face = FaceVertices[faceIndex];
+            Vector3 offset = (Vector3)NeighborOffsets[faceIndex] * 0.001f;
+            GetDamageTangentAxes(faceIndex, out int uAxis, out int vAxis);
+            int firstVertex = vertices.Count;
+
+            float stageStart = (float)stage / damageStageCount;
+            float stageWidth = 1f / damageStageCount;
+            for (int i = 0; i < face.Length; i++)
+            {
+                Vector3 corner = face[i];
+                vertices.Add(tilePosition + corner + offset);
+                uv.Add(new Vector2(
+                    stageStart + damageLayerHalfTexelU
+                        + GetAxisValue(corner, uAxis) * (stageWidth - 2f * damageLayerHalfTexelU),
+                    GetAxisValue(corner, vAxis)));
+            }
+
+            triangles.Add(firstVertex);
+            triangles.Add(firstVertex + 1);
+            triangles.Add(firstVertex + 2);
+            triangles.Add(firstVertex);
+            triangles.Add(firstVertex + 2);
+            triangles.Add(firstVertex + 3);
+        }
+
+        // Damage frames keep their own axes (vertical = world Y on side faces),
+        // independent of the dual-grid atlas axes below.
+        private static void GetDamageTangentAxes(int faceIndex, out int uAxis, out int vAxis)
+        {
+            if (faceIndex < 2)
+            {
+                uAxis = 2;
+                vAxis = 1;
+            }
+            else if (faceIndex < 4)
+            {
+                uAxis = 0;
+                vAxis = 2;
+            }
+            else
+            {
+                uAxis = 0;
+                vAxis = 1;
+            }
+        }
+
+        #endregion
 
         private void AddDualGridFace(
             Vector3Int tilePosition,
@@ -403,8 +607,14 @@ namespace Episeanter.Content.Client.Maps
             public readonly MeshFilter MeshFilter;
             public readonly MeshRenderer MeshRenderer;
             public readonly MeshCollider MeshCollider;
+            public readonly GameObject DamageGameObject;
+            public readonly MeshFilter DamageMeshFilter;
+            public readonly MeshRenderer DamageMeshRenderer;
             public readonly List<Vector3> Vertices = new List<Vector3>();
             public readonly List<Vector2> Uv = new List<Vector2>();
+            public readonly List<Vector3> DamageVertices = new List<Vector3>();
+            public readonly List<Vector2> DamageUv = new List<Vector2>();
+            public readonly List<int> DamageTriangles = new List<int>();
             public readonly List<Material> Materials = new List<Material>();
             public readonly Dictionary<Material, int> MaterialIndices = new Dictionary<Material, int>();
             public readonly List<List<int>> TrianglesByMaterial = new List<List<int>>();
@@ -416,6 +626,19 @@ namespace Episeanter.Content.Client.Maps
                 MeshFilter = gameObject.AddComponent<MeshFilter>();
                 MeshRenderer = gameObject.AddComponent<MeshRenderer>();
                 MeshCollider = gameObject.AddComponent<MeshCollider>();
+
+                DamageGameObject = new GameObject($"{gameObject.name} Damage Layer");
+                DamageGameObject.transform.SetParent(gameObject.transform, false);
+                DamageMeshFilter = DamageGameObject.AddComponent<MeshFilter>();
+                DamageMeshRenderer = DamageGameObject.AddComponent<MeshRenderer>();
+                DamageMeshRenderer.shadowCastingMode = ShadowCastingMode.Off;
+                DamageMeshRenderer.receiveShadows = false;
+                DamageMeshFilter.sharedMesh = new Mesh
+                {
+                    name = $"{gameObject.name} Damage Layer",
+                    indexFormat = IndexFormat.UInt32
+                };
+                DamageMeshFilter.sharedMesh.MarkDynamic();
             }
 
             public bool HasSameMaterials(List<Material> materials)

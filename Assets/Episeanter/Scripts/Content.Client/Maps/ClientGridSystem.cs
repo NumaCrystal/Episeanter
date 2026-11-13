@@ -7,10 +7,10 @@ namespace Episeanter.Content.Client.Maps
     [RequireComponent(typeof(GridRenderer))]
     public sealed class ClientGridSystem : NetworkBehaviour
     {
-        [SerializeField] 
+        [SerializeField]
         private GridSettings settings;
 
-        [SerializeField] 
+        [SerializeField]
         private GridRenderer gridRenderer;
 
         public GridData Data { get; private set; }
@@ -25,6 +25,7 @@ namespace Episeanter.Content.Client.Maps
 
             NetworkClient.RegisterHandler<ChunkDataMessage>(OnChunkData);
             NetworkClient.RegisterHandler<TilesChangedMessage>(OnTilesChanged);
+            NetworkClient.RegisterHandler<TileHealthMessage>(OnHealth);
 
             NetworkClient.Send(new GridSnapshotRequest { RegistryHash = TileRegistry.Instance.Hash });
         }
@@ -33,6 +34,7 @@ namespace Episeanter.Content.Client.Maps
         {
             NetworkClient.UnregisterHandler<ChunkDataMessage>();
             NetworkClient.UnregisterHandler<TilesChangedMessage>();
+            NetworkClient.UnregisterHandler<TileHealthMessage>();
 
             if (gridRenderer != null)
                 gridRenderer.Unbind();
@@ -60,6 +62,16 @@ namespace Episeanter.Content.Client.Maps
             NetworkClient.Send(new RemoveTileRequest { Position = position });
         }
 
+        public void RequestDamage(Vector3Int position, float damage)
+        {
+            if (!NetworkClient.active || Data == null)
+                return;
+            if (!GridRules.CanDamage(Data, TileRegistry.Instance, position, damage, out _))
+                return;
+
+            NetworkClient.Send(new DamageTileRequest { Position = position, Damage = damage });
+        }
+
         private void OnChunkData(ChunkDataMessage message)
         {
             if (Data == null)
@@ -67,6 +79,8 @@ namespace Episeanter.Content.Client.Maps
 
             if (!Data.ImportChunk(message.ChunkPosition, message.Ids))
                 return;
+
+            Data.ReplaceChunkHealth(message.ChunkPosition, message.DamagedPositions, message.Healths);
         }
 
         private void OnTilesChanged(TilesChangedMessage message)
@@ -82,6 +96,16 @@ namespace Episeanter.Content.Client.Maps
                 else
                     Data.SetTile(message.Positions[i], message.Ids[i]);
             }
+        }
+
+        private void OnHealth(TileHealthMessage message)
+        {
+            if (Data == null || message.Positions == null || message.Healths == null)
+                return;
+
+            int count = Mathf.Min(message.Positions.Length, message.Healths.Length);
+            for (int i = 0; i < count; i++)
+                Data.SetHealth(message.Positions[i], message.Healths[i]);
         }
     }
 }

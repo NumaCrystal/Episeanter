@@ -9,6 +9,8 @@ namespace Episeanter.Content.Shared.Maps
         private readonly Dictionary<Vector2Int, Dictionary<Vector3Int, uint>> chunks =
             new Dictionary<Vector2Int, Dictionary<Vector3Int, uint>>();
 
+        private readonly Dictionary<Vector3Int, float> healthByCell = new Dictionary<Vector3Int, float>();
+
         public GridData(int heightLimit, int chunkSize)
         {
             if (heightLimit < 1)
@@ -27,7 +29,11 @@ namespace Episeanter.Content.Shared.Maps
 
         public event Action<Vector3Int, uint> TileChanged;
 
+        public event Action<Vector3Int, float> HealthChanged;
+
         public event Action<Vector2Int> ChunkLoaded;
+
+        public IEnumerable<KeyValuePair<Vector3Int, float>> DamagedTiles => healthByCell;
 
         public IEnumerable<Vector2Int> ChunkPositions => chunks.Keys;
 
@@ -66,6 +72,7 @@ namespace Episeanter.Content.Shared.Maps
             if (tiles.TryGetValue(local, out uint current) && current == tileId)
                 return false;
 
+            healthByCell.Remove(position);
             tiles[local] = tileId;
             TileChanged?.Invoke(position, tileId);
             return true;
@@ -84,8 +91,73 @@ namespace Episeanter.Content.Shared.Maps
             if (tiles.Count == 0)
                 chunks.Remove(chunkPosition);
 
+            healthByCell.Remove(position);
             TileChanged?.Invoke(position, 0);
             return true;
+        }
+
+        public bool TryGetHealth(Vector3Int position, out float health)
+            => healthByCell.TryGetValue(position, out health);
+
+        public float GetHealth(Vector3Int position, float maxHealth)
+        {
+            if (!TryGetTileId(position, out _))
+                return 0f;
+
+            return healthByCell.TryGetValue(position, out float health) ? health : maxHealth;
+        }
+
+        public bool SetHealth(Vector3Int position, float health)
+        {
+            if (!TryGetTileId(position, out _)
+                || float.IsNaN(health)
+                || float.IsInfinity(health)
+                || health <= 0f)
+                return false;
+
+            if (healthByCell.TryGetValue(position, out float current) && Mathf.Approximately(current, health))
+                return false;
+
+            healthByCell[position] = health;
+            HealthChanged?.Invoke(position, health);
+            return true;
+        }
+
+        public void CopyDamagedTiles(Vector2Int chunkPosition, List<Vector3Int> positions, List<float> healths)
+        {
+            positions.Clear();
+            healths.Clear();
+            foreach (KeyValuePair<Vector3Int, float> entry in healthByCell)
+            {
+                if (GetChunkPosition(entry.Key) != chunkPosition)
+                    continue;
+
+                positions.Add(entry.Key);
+                healths.Add(entry.Value);
+            }
+        }
+
+        public void ReplaceChunkHealth(Vector2Int chunkPosition, Vector3Int[] positions, float[] healths)
+        {
+            var stale = new List<Vector3Int>();
+            foreach (Vector3Int position in healthByCell.Keys)
+            {
+                if (GetChunkPosition(position) == chunkPosition)
+                    stale.Add(position);
+            }
+
+            for (int i = 0; i < stale.Count; i++)
+            {
+                healthByCell.Remove(stale[i]);
+                HealthChanged?.Invoke(stale[i], 0f);
+            }
+
+            if (positions == null || healths == null)
+                return;
+
+            int count = Math.Min(positions.Length, healths.Length);
+            for (int i = 0; i < count; i++)
+                SetHealth(positions[i], healths[i]);
         }
 
         public uint[] ExportChunk(Vector2Int chunkPosition)

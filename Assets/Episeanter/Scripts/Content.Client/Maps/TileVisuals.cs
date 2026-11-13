@@ -4,6 +4,10 @@ using UnityEngine;
 
 namespace Episeanter.Content.Client.Maps
 {
+    /// <summary>
+    /// Client-only materials per tile ID. Surface materials are 4x4 dual-grid atlases,
+    /// so their textures must have dimensions divisible by 4.
+    /// </summary>
     [CreateAssetMenu(fileName = "TileVisuals", menuName = "Episeanter/Grids/Tile Visuals")]
     public sealed class TileVisuals : ScriptableObject
     {
@@ -58,20 +62,29 @@ namespace Episeanter.Content.Client.Maps
 
         private void ValidateAtlas(uint tileId, Material material)
         {
+            if (material == null)
+                return;
+
             Texture texture = material.HasProperty("_BaseMap")
                 ? material.GetTexture("_BaseMap")
                 : material.HasProperty("_MainTex")
                     ? material.GetTexture("_MainTex")
                     : null;
+
+            if (texture != null && (texture.width < 4 || texture.height < 4
+                || texture.width % 4 != 0 || texture.height % 4 != 0))
+                Debug.LogError(
+                    $"Material '{material.name}' for tile ID {tileId} must use a texture with dimensions divisible by 4 for its 4x4 dual-grid atlas.",
+                    this);
         }
 
         [Serializable]
         private sealed class Entry
         {
-            [SerializeField, Min(1)] 
+            [SerializeField, Min(1)]
             private uint id;
 
-            [SerializeField] 
+            [SerializeField]
             private Material material;
 
             [SerializeField]
