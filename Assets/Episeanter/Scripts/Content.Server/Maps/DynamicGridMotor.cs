@@ -9,8 +9,10 @@ namespace Episeanter.Content.Server.Maps
     [RequireComponent(typeof(ServerGridSystem), typeof(Rigidbody))]
     public sealed class DynamicGridMotor : NetworkBehaviour
     {
-        [SerializeField] private float rotationX;
-        [SerializeField] private float rotationZ;
+        [SerializeField] 
+        private float rotationX;
+        [SerializeField] 
+        private float rotationZ;
         [SerializeField]
         private float positionY;
 

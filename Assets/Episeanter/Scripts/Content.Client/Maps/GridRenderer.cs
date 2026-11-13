@@ -12,7 +12,7 @@ namespace Episeanter.Content.Client.Maps
     {
         [SerializeField] private TileVisuals visuals;
         [SerializeField] private Material damageLayerMaterial;
-        [SerializeField, Tooltip("Builds MeshColliders for chunk meshes (used for raycasts). Skipped automatically when the grid has a non-kinematic Rigidbody, because non-convex mesh colliders are not allowed on dynamic bodies.")]
+        [SerializeField]
         private bool generateMeshColliders = true;
 
         private static readonly Vector3Int[] NeighborOffsets =
@@ -270,12 +270,6 @@ namespace Episeanter.Content.Client.Maps
             DestroyUnityObject(view.GameObject);
         }
 
-        #region Damage overlay
-
-        /// <summary>
-        /// Reads the damage layer material (a horizontal strip of square damage frames)
-        /// and schedules every chunk for a rebuild.
-        /// </summary>
         private void RefreshDamageOverlay()
         {
             damageOverlayReady = false;
@@ -417,8 +411,6 @@ namespace Episeanter.Content.Client.Maps
             triangles.Add(firstVertex + 3);
         }
 
-        // Damage frames keep their own axes (vertical = world Y on side faces),
-        // independent of the dual-grid atlas axes below.
         private static void GetDamageTangentAxes(int faceIndex, out int uAxis, out int vAxis)
         {
             if (faceIndex < 2)
@@ -438,7 +430,6 @@ namespace Episeanter.Content.Client.Maps
             }
         }
 
-        #endregion
 
         private void AddDualGridFace(
             Vector3Int tilePosition,

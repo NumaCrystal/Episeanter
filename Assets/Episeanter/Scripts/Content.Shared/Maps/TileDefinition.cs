@@ -5,10 +5,10 @@ namespace Episeanter.Content.Shared.Maps
     [CreateAssetMenu(fileName = "NewTile", menuName = "Episeanter/Grids/Tile Definition")]
     public sealed class TileDefinition : ScriptableObject
     {
-        [SerializeField, Min(0.01f)] 
-        private float maxHealth = 100f;
-        [SerializeField, Min(0f)]
-        private float minimumDamage;
+        [SerializeField]
+         private float maxHealth = 100f;
+        [SerializeField]
+        private float minimumDamage = 0.01f;
 
         public float MaxHealth => maxHealth;
         public float MinimumDamage => minimumDamage;

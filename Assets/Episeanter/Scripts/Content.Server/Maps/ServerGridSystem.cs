@@ -10,11 +10,10 @@ namespace Episeanter.Content.Server.Maps
     {
         private const int MaxChangesPerMessage = 512;
 
-        [SerializeField] 
-        private GridSettings settings;
+        [SerializeField] private GridSettings settings;
 
         [Header("Validation")]
-        [SerializeField, Tooltip("Allows connected players to place, remove and damage tiles.")]
+        [SerializeField]
         private bool allowClientEdits = true;
 
         [SerializeField, Min(0f)]

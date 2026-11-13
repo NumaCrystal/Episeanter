@@ -12,7 +12,10 @@ namespace Episeanter.Content.Server.Maps
             gridSystem = GetComponent<ServerGridSystem>();
 
             if (gridSystem == null)
+            {
+                Debug.LogError("ServerGridSystem is not assigned!");
                 yield break;
+            }
 
             yield return new WaitUntil(() => gridSystem.Data != null);
 
@@ -22,7 +25,6 @@ namespace Episeanter.Content.Server.Maps
             for (int x = 0; x < 10; x++)
                 for (int y = 0; y < 10; y++)
                     gridSystem.SetTile(new Vector3Int(x, 0, y), 1);
-
         }
     }
 }

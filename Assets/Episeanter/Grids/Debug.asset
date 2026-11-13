@@ -11,11 +11,5 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 61f5f491a7a741f4c91e3881ba95f79a, type: 3}
   m_Name: Debug
-<<<<<<< HEAD:Assets/Episeanter/Tiles/Debug.asset
-  m_EditorClassIdentifier: Assembly-CSharp::Episeanter.Grids.TileDefinition
-  material: {fileID: 2100000, guid: 8d7c4313bf6b4e0419b6e9d5489a50de, type: 2}
-  sideMaterial: {fileID: 2100000, guid: 1cd97c0da2e81364c8e01fd467a04f35, type: 2}
-=======
   m_EditorClassIdentifier: Episeanter.Content.Shared::Episeanter.Content.Shared.Maps.TileDefinition
   solid: 1
->>>>>>> 0be167e339ec0e7021c3eddb4c377eb5df3e89bd:Assets/Episeanter/Grids/Debug.asset

@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace Episeanter.Content.Client.Maps
 {
-    /// <summary>
-    /// Client-only materials per tile ID. Surface materials are 4x4 dual-grid atlases,
-    /// so their textures must have dimensions divisible by 4.
-    /// </summary>
     [CreateAssetMenu(fileName = "TileVisuals", menuName = "Episeanter/Grids/Tile Visuals")]
     public sealed class TileVisuals : ScriptableObject
     {

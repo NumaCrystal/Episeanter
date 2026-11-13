@@ -105,10 +105,6 @@ namespace Episeanter.Content.Client.Maps
             system.RequestPlace(cell, tileId);
         }
 
-        /// <summary>
-        /// Places a tile on the grid plane where nothing was hit. The grid is one unbounded world,
-        /// so a cell next to existing tiles and a cell far away are handled the same way.
-        /// </summary>
         private void TryPlaceOnEmptySpace(Mouse mouse)
         {
             if (!TryGetSelectedTileId(out uint tileId))
