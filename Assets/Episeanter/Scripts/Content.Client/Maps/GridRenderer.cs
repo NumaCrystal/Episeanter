@@ -36,7 +36,31 @@ namespace Episeanter.Content.Client.Maps
         };
 
         private const float AtlasCellCount = 4f;
-        private const float AtlasCellInset = 1f / 512f;
+
+        // Индекс = маска соседей вокруг угла:
+        //   bit0 = (u-, v-) нижний левый, bit1 = (u+, v-) нижний правый,
+        //   bit2 = (u-, v+) верхний левый, bit3 = (u+, v+) верхний правый.
+        // Значение = atlasRow * 4 + atlasColumn (ряд 0 = нижний ряд текстуры).
+        // Построено по debug_dualgrid_1.png: закрашенный квадрант клетки = тайл есть.
+        private static readonly int[] MaskToCellTable =
+        {
+            0,  // нет
+            8,  // BL
+            4,  // BR
+            12, // BL+BR
+            2,  // TL
+            10, // TL+BL
+            6,  // TL+BR
+            14, // TL+BL+BR
+            1,  // TR
+            9,  // TR+BL
+            5,  // TR+BR
+            13, // TR+BL+BR
+            3,  // TL+TR
+            11, // TL+TR+BL
+            7,  // TL+TR+BR
+            15  // все
+        };
 
         private readonly Dictionary<Vector2Int, ChunkView> views = new Dictionary<Vector2Int, ChunkView>();
         private readonly HashSet<Vector2Int> dirtyChunks = new HashSet<Vector2Int>();
@@ -218,6 +242,7 @@ namespace Episeanter.Content.Client.Maps
                         globalPosition,
                         face,
                         tileEntry.Value,
+                        material,
                         vertices,
                         uv,
                         trianglesByMaterial[materialIndex]);
@@ -388,7 +413,7 @@ namespace Episeanter.Content.Client.Maps
         {
             Vector3[] face = FaceVertices[faceIndex];
             Vector3 offset = (Vector3)NeighborOffsets[faceIndex] * 0.001f;
-            GetDamageTangentAxes(faceIndex, out int uAxis, out int vAxis);
+            GetFaceTangentAxes(faceIndex, out int uAxis, out int vAxis);
             int firstVertex = vertices.Count;
 
             float stageStart = (float)stage / damageStageCount;
@@ -411,37 +436,22 @@ namespace Episeanter.Content.Client.Maps
             triangles.Add(firstVertex + 3);
         }
 
-        private static void GetDamageTangentAxes(int faceIndex, out int uAxis, out int vAxis)
-        {
-            if (faceIndex < 2)
-            {
-                uAxis = 2;
-                vAxis = 1;
-            }
-            else if (faceIndex < 4)
-            {
-                uAxis = 0;
-                vAxis = 2;
-            }
-            else
-            {
-                uAxis = 0;
-                vAxis = 1;
-            }
-        }
-
-
         private void AddDualGridFace(
             Vector3Int tilePosition,
             Vector3Int globalPosition,
             int faceIndex,
             uint tileId,
+            Material material,
             List<Vector3> vertices,
             List<Vector2> uv,
             List<int> triangles)
         {
             Vector3[] face = FaceVertices[faceIndex];
             GetFaceTangentAxes(faceIndex, out int uAxis, out int vAxis);
+            Texture atlas = GetMaterialAtlas(material);
+            float insetU = atlas != null ? AtlasCellCount / atlas.width : 0f;
+            float insetV = atlas != null ? AtlasCellCount / atlas.height : 0f;
+
             for (int cornerIndex = 0; cornerIndex < face.Length; cornerIndex++)
             {
                 Vector3 corner = face[cornerIndex];
@@ -456,18 +466,22 @@ namespace Episeanter.Content.Client.Maps
                     (previous + corner) * 0.5f
                 };
 
-                int filledMask = GetDualGridMask(globalPosition, corner, uAxis, vAxis, tileId);
-                int mask = filledMask ^ 0xF;
-                int atlasColumn = mask & 3;
-                int atlasRow = mask >> 2;
-                int cornerU = Mathf.RoundToInt(GetAxisValue(corner, uAxis));
-                int cornerV = Mathf.RoundToInt(GetAxisValue(corner, vAxis));
+                int mask = GetDualGridMask(globalPosition, corner, uAxis, vAxis, tileId);
+                MaskToAtlasCell(mask, out int atlasColumn, out int atlasRow);
+
                 int firstVertex = vertices.Count;
                 for (int i = 0; i < patch.Length; i++)
                 {
                     vertices.Add(tilePosition + patch[i]);
-                    float cellU = InsetAtlasCell(GetAxisValue(patch[i], uAxis) - cornerU + 0.5f);
-                    float cellV = InsetAtlasCell(GetAxisValue(patch[i], vAxis) - cornerV + 0.5f);
+                    // Квадрант клетки атласа повёрнут на 180° внутри себя:
+                    // край рисунка (красная грань) оказывается у внешнего края тайла.
+                    // Было: axis - corner + 0.5, стало: 1 - axis (для обоих углов одинаково).
+                    float cellU = InsetAtlasCell(
+                        1f - GetAxisValue(patch[i], uAxis),
+                        insetU);
+                    float cellV = InsetAtlasCell(
+                        1f - GetAxisValue(patch[i], vAxis),
+                        insetV);
                     uv.Add(new Vector2(
                         (atlasColumn + cellU) / AtlasCellCount,
                         (atlasRow + cellV) / AtlasCellCount));
@@ -480,6 +494,21 @@ namespace Episeanter.Content.Client.Maps
                 triangles.Add(firstVertex + 2);
                 triangles.Add(firstVertex + 3);
             }
+        }
+
+        private static void MaskToAtlasCell(int mask, out int column, out int row)
+        {
+            int cell = MaskToCellTable[mask & 15];
+            column = cell & 3;
+            row = cell >> 2;
+        }
+
+        private static Texture GetMaterialAtlas(Material material)
+        {
+            if (material.HasProperty("_BaseMap"))
+                return material.GetTexture("_BaseMap");
+
+            return material.HasProperty("_MainTex") ? material.GetTexture("_MainTex") : null;
         }
 
         private int GetDualGridMask(
@@ -511,8 +540,8 @@ namespace Episeanter.Content.Client.Maps
             return mask;
         }
 
-        private static float InsetAtlasCell(float value)
-            => Mathf.Lerp(AtlasCellInset, 1f - AtlasCellInset, value);
+        private static float InsetAtlasCell(float value, float inset)
+            => Mathf.Lerp(inset, 1f - inset, value);
 
         private static int GetCornerOffset(int cornerCoordinate, int direction)
         {
@@ -526,8 +555,8 @@ namespace Episeanter.Content.Client.Maps
         {
             if (faceIndex < 2)
             {
-                uAxis = 1;
-                vAxis = 2;
+                uAxis = 2;
+                vAxis = 1;
             }
             else if (faceIndex < 4)
             {
