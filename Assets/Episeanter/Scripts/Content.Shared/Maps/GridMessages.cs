@@ -19,10 +19,24 @@ namespace Episeanter.Content.Shared.Maps
         public Vector3Int Position;
     }
 
+    public struct DamageTileRequest : NetworkMessage
+    {
+        public Vector3Int Position;
+        public float Damage;
+    }
+
     public struct ChunkDataMessage : NetworkMessage
     {
         public Vector2Int ChunkPosition;
         public uint[] Ids;
+        public Vector3Int[] DamagedPositions;
+        public float[] Healths;
+    }
+
+    public struct TileHealthMessage : NetworkMessage
+    {
+        public Vector3Int[] Positions;
+        public float[] Healths;
     }
 
     public struct TilesChangedMessage : NetworkMessage

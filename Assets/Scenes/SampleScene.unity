@@ -241,13 +241,13 @@ PrefabInstance:
       addedObject: {fileID: 2131881876}
     - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 2131881875}
-    - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
-      insertIndex: -1
       addedObject: {fileID: 2131881874}
     - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2131881877}
+    - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2131881879}
   m_SourcePrefab: {fileID: 100100000, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
 --- !u!1 &330585543
 GameObject:
@@ -401,10 +401,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Episeanter.Content.Client::Episeanter.Content.Client.Maps.GridClickInteraction
   targetCamera: {fileID: 0}
   maxDistance: 100
+  damagePerHit: 10
   interactionLayers:
     serializedVersion: 2
     m_Bits: 51
-  tileId: 1
+  tileIdsForTesting: 0100000002000000
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -684,7 +685,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1700000000}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bfc3fa99356097b4a98ecda531b3da7d, type: 3}
+  m_Script: {fileID: 11500000, guid: 5df465c9988ae5444b00c26c5a0b95b2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Episeanter.Content.Shared::Episeanter.Content.Shared.Maps.TileRegistry
   entries:
@@ -803,27 +804,11 @@ MonoBehaviour:
   syncMode: 0
   syncInterval: 0
   settings: {fileID: 11400000, guid: 2b481094262b4244c850552ee6abebde, type: 2}
+  allowClientEdits: 1
   maxReach: 0
   generateOnStart: 1
   generateSize: {x: 100, y: 100}
   generateTileId: 1
---- !u!114 &2131881875
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2131881870}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6229054ea5622d4fb495b17528cecee, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Episeanter.Content.Client::Episeanter.Content.Client.Maps.ClientGridSystem
-  syncDirection: 0
-  syncMode: 0
-  syncInterval: 0
-  settings: {fileID: 11400000, guid: 2b481094262b4244c850552ee6abebde, type: 2}
-  gridRenderer: {fileID: 2131881876}
 --- !u!114 &2131881876
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -837,6 +822,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Episeanter.Content.Client::Episeanter.Content.Client.Maps.GridRenderer
   visuals: {fileID: 11400000, guid: 6d826b9e183200943aea4b15574dbbdd, type: 2}
+  damageLayerMaterial: {fileID: 0}
+  generateMeshColliders: 1
 --- !u!114 &2131881877
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -854,6 +841,23 @@ MonoBehaviour:
   serverOnly: 0
   visibility: 0
   hasSpawned: 0
+--- !u!114 &2131881879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2131881870}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fafd6cc678c4c249a9da595ea394929, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Episeanter.Content.Client::Episeanter.Content.Client.Maps.ClientGridSystem
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  settings: {fileID: 11400000, guid: 2b481094262b4244c850552ee6abebde, type: 2}
+  gridRenderer: {fileID: 0}
 --- !u!1001 &3334580969713616520
 PrefabInstance:
   m_ObjectHideFlags: 0
