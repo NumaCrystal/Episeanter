@@ -8,9 +8,6 @@ namespace Episeanter.Content.Client.Maps
     public sealed class ClientGridSystem : NetworkBehaviour
     {
         [SerializeField]
-        private GridSettings settings;
-
-        [SerializeField]
         private GridRenderer gridRenderer;
 
         public GridData Data { get; private set; }
@@ -20,6 +17,7 @@ namespace Episeanter.Content.Client.Maps
             if (gridRenderer == null)
                 gridRenderer = GetComponent<GridRenderer>();
 
+            GridSettings settings = GridSettings.Instance;
             Data = new GridData(settings.HeightLimit, settings.ChunkSize);
             gridRenderer.Bind(Data);
 

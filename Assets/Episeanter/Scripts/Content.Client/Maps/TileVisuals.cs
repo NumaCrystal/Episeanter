@@ -4,12 +4,52 @@ using UnityEngine;
 
 namespace Episeanter.Content.Client.Maps
 {
-    [CreateAssetMenu(fileName = "TileVisuals", menuName = "Episeanter/Grids/Tile Visuals")]
-    public sealed class TileVisuals : ScriptableObject
+    [DisallowMultipleComponent]
+    public sealed class TileVisuals : MonoBehaviour
     {
+
         [SerializeField] private List<Entry> entries = new List<Entry>();
+        [SerializeField] private Material damageLayerMaterial;
+        private static TileVisuals instance;
 
         private Dictionary<uint, Entry> lookup;
+
+        public static TileVisuals Instance
+        {
+            get
+            {
+                if (instance == null)
+                    throw new InvalidOperationException("No TileVisuals singleton exists in the loaded scene.");
+
+                return instance;
+            }
+        }
+
+        public Material DamageLayerMaterial => damageLayerMaterial;
+
+        private void Awake()
+        {
+            if (instance != null && instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+
+        private void OnDestroy()
+        {
+            if (instance == this)
+                instance = null;
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetSingleton()
+        {
+            instance = null;
+        }
 
         public bool TryGetMaterials(uint tileId, out Material top, out Material side)
         {

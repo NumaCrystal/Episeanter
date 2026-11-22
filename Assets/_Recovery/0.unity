@@ -851,7 +851,6 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  settings: {fileID: 11400000, guid: 2b481094262b4244c850552ee6abebde, type: 2}
   maxReach: 0
   generateOnStart: 1
   generateSize: {x: 100, y: 100}
@@ -871,7 +870,6 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  settings: {fileID: 11400000, guid: 2b481094262b4244c850552ee6abebde, type: 2}
   gridRenderer: {fileID: 0}
 --- !u!114 &2131881876
 MonoBehaviour:
@@ -885,7 +883,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56af72a7f76b79c4588b1dc9ef7f9bd5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Episeanter.Content.Client::Episeanter.Content.Client.Maps.GridRenderer
-  visuals: {fileID: 11400000, guid: 6d826b9e183200943aea4b15574dbbdd, type: 2}
 --- !u!114 &2131881877
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -10,8 +10,6 @@ namespace Episeanter.Content.Server.Maps
     {
         private const int MaxChangesPerMessage = 512;
 
-        [SerializeField] private GridSettings settings;
-
         [Header("Validation")]
         [SerializeField]
         private bool allowClientEdits = true;
@@ -39,6 +37,7 @@ namespace Episeanter.Content.Server.Maps
 
         public override void OnStartServer()
         {
+            GridSettings settings = GridSettings.Instance;
             Data = new GridData(settings.HeightLimit, settings.ChunkSize);
             Data.TileChanged += OnTileChanged;
             Data.HealthChanged += OnHealthChanged;

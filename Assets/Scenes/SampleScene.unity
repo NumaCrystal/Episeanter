@@ -533,6 +533,52 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &590862546
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 590862548}
+  - component: {fileID: 590862547}
+  m_Layer: 0
+  m_Name: Settings
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &590862547
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 590862546}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aff99b1f737a6584ab17fb1c3a3926b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Episeanter.Content.Shared::Episeanter.Content.Shared.Maps.GridSettings
+  heightLimit: 2
+  chunkSize: 16
+--- !u!4 &590862548
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 590862546}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.27389, y: -39.37098, z: 109.87539}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &832575517
 GameObject:
   m_ObjectHideFlags: 0
@@ -654,6 +700,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1700000001}
   - component: {fileID: 1700000002}
+  - component: {fileID: 1700000003}
   m_Layer: 0
   m_Name: TileRegistry
   m_TagString: Untagged
@@ -691,6 +738,23 @@ MonoBehaviour:
   entries:
   - id: 1
     definition: {fileID: 11400000, guid: 9f8d14ee091d21e49b363410c383f1dc, type: 2}
+--- !u!114 &1700000003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1700000000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c604e9d870592d242aaa2430791ad832, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Episeanter.Content.Client::Episeanter.Content.Client.Maps.TileVisuals
+  entries:
+  - id: 1
+    material: {fileID: 2100000, guid: 8d7c4313bf6b4e0419b6e9d5489a50de, type: 2}
+    sideMaterial: {fileID: 0}
+  damageLayerMaterial: {fileID: 2100000, guid: f12875ebc116a004da413a1036d51174, type: 2}
 --- !u!1 &1765491556
 GameObject:
   m_ObjectHideFlags: 0
@@ -803,7 +867,6 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  settings: {fileID: 11400000, guid: 2b481094262b4244c850552ee6abebde, type: 2}
   allowClientEdits: 1
   maxReach: 0
   generateOnStart: 1
@@ -821,8 +884,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 56af72a7f76b79c4588b1dc9ef7f9bd5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Episeanter.Content.Client::Episeanter.Content.Client.Maps.GridRenderer
-  visuals: {fileID: 11400000, guid: 6d826b9e183200943aea4b15574dbbdd, type: 2}
-  damageLayerMaterial: {fileID: 0}
   generateMeshColliders: 1
 --- !u!114 &2131881877
 MonoBehaviour:
@@ -856,7 +917,6 @@ MonoBehaviour:
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  settings: {fileID: 11400000, guid: 2b481094262b4244c850552ee6abebde, type: 2}
   gridRenderer: {fileID: 0}
 --- !u!1001 &3334580969713616520
 PrefabInstance:
@@ -924,6 +984,7 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 883638363}
+  - {fileID: 590862548}
   - {fileID: 1700000001}
   - {fileID: 242652197}
   - {fileID: 1765491559}

@@ -10,10 +10,8 @@ namespace Episeanter.Content.Client.Maps
     [DisallowMultipleComponent]
     public sealed class GridRenderer : MonoBehaviour
     {
-        [SerializeField] private TileVisuals visuals;
-        [SerializeField] private Material damageLayerMaterial;
-        [SerializeField]
-        private bool generateMeshColliders = true;
+        [SerializeField] private bool generateMeshColliders = true;
+        private Material damageLayerMaterial;
 
         private static readonly Vector3Int[] NeighborOffsets =
         {
@@ -82,6 +80,7 @@ namespace Episeanter.Content.Client.Maps
         private void Awake()
         {
             body = GetComponent<Rigidbody>();
+            damageLayerMaterial = TileVisuals.Instance.DamageLayerMaterial;
         }
 
         public void Bind(GridData gridData)
@@ -208,7 +207,7 @@ namespace Episeanter.Content.Client.Maps
 
             foreach (KeyValuePair<Vector3Int, uint> tileEntry in tiles)
             {
-                if (visuals == null || !visuals.TryGetMaterials(tileEntry.Value, out Material topMaterial, out Material sideMaterial))
+                if (!TileVisuals.Instance.TryGetMaterials(tileEntry.Value, out Material topMaterial, out Material sideMaterial))
                 {
                     if (missingVisuals.Add(tileEntry.Value))
                         Debug.LogWarning($"No visuals registered in TileVisuals for tile ID {tileEntry.Value}.", this);
