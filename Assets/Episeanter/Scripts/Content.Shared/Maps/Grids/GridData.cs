@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using Episeanter.Content.Shared.Events;
+using Episeanter.Content.Shared.Maps.Events;
+using Episeanter.Content.Shared.Maps.Util;
 using UnityEngine;
 
-namespace Episeanter.Content.Shared.Maps
+namespace Episeanter.Content.Shared.Maps.Grids
 {
     public sealed class GridData
     {
@@ -11,7 +14,7 @@ namespace Episeanter.Content.Shared.Maps
 
         private readonly Dictionary<Vector3Int, float> healthByCell = new Dictionary<Vector3Int, float>();
 
-        public GridData(int heightLimit, int chunkSize)
+        public GridData(int heightLimit, int chunkSize, uint gridNetId)
         {
             if (heightLimit < 1)
                 throw new ArgumentOutOfRangeException(nameof(heightLimit));
@@ -20,18 +23,13 @@ namespace Episeanter.Content.Shared.Maps
 
             HeightLimit = heightLimit;
             ChunkSize = chunkSize;
+            GridNetId = gridNetId;
         }
 
         public int HeightLimit { get; }
         public int ChunkSize { get; }
         public int ChunkVolume => ChunkSize * ChunkSize * HeightLimit;
-
-
-        public event Action<Vector3Int, uint> TileChanged;
-
-        public event Action<Vector3Int, float> HealthChanged;
-
-        public event Action<Vector2Int> ChunkLoaded;
+        public uint GridNetId { get; }
 
         public IEnumerable<KeyValuePair<Vector3Int, float>> DamagedTiles => healthByCell;
 
@@ -74,7 +72,7 @@ namespace Episeanter.Content.Shared.Maps
 
             healthByCell.Remove(position);
             tiles[local] = tileId;
-            TileChanged?.Invoke(position, tileId);
+            EventBus.Publish(new PlaceTileEvent { GridNetId = GridNetId, Position = position, TileId = tileId });
             return true;
         }
 
@@ -92,7 +90,7 @@ namespace Episeanter.Content.Shared.Maps
                 chunks.Remove(chunkPosition);
 
             healthByCell.Remove(position);
-            TileChanged?.Invoke(position, 0);
+            EventBus.Publish(new RemoveTileEvent { GridNetId = GridNetId, Position = position });
             return true;
         }
 
@@ -119,7 +117,7 @@ namespace Episeanter.Content.Shared.Maps
                 return false;
 
             healthByCell[position] = health;
-            HealthChanged?.Invoke(position, health);
+            EventBus.Publish(new TileHealthChangedEvent { GridNetId = GridNetId, Position = position, Health = health });
             return true;
         }
 
@@ -149,7 +147,7 @@ namespace Episeanter.Content.Shared.Maps
             for (int i = 0; i < stale.Count; i++)
             {
                 healthByCell.Remove(stale[i]);
-                HealthChanged?.Invoke(stale[i], 0f);
+                EventBus.Publish(new TileHealthChangedEvent { GridNetId = GridNetId, Position = stale[i], Health = 0f });
             }
 
             if (positions == null || healths == null)
@@ -195,7 +193,7 @@ namespace Episeanter.Content.Shared.Maps
             else
                 chunks[chunkPosition] = tiles;
 
-            ChunkLoaded?.Invoke(chunkPosition);
+            EventBus.Publish(new ChunkLoadedEvent { GridNetId = GridNetId, ChunkPosition = chunkPosition });
             return true;
         }
 
@@ -226,6 +224,48 @@ namespace Episeanter.Content.Shared.Maps
         {
             int remainder = value % divisor;
             return remainder < 0 ? remainder + divisor : remainder;
+        }
+
+        public bool IsTileConnected(Vector3Int cell)
+        {
+
+            if (!InBounds(cell))
+                return false;
+
+            return GetTileId(cell) != 0
+                || GetTileId(cell + Vector3Int.forward) != 0
+                || GetTileId(cell - Vector3Int.forward) != 0
+                || GetTileId(cell + Vector3Int.right) != 0
+                || GetTileId(cell - Vector3Int.right) != 0
+                || GetTileId(cell - Vector3Int.up) != 0;
+        }
+
+        public Vector3Int WorldToCell(Vector3 worldPosition, Transform gridTransform)
+        {
+            if (gridTransform == null)
+                throw new ArgumentNullException(nameof(gridTransform));
+
+            Vector3 localPos = gridTransform.InverseTransformPoint(worldPosition);
+            return Vector3Int.FloorToInt(localPos);
+        }
+
+        public Vector3Int WorldToCell(Vector3 worldPosition, MonoBehaviour monoBehaviour)
+        {
+            return WorldToCell(worldPosition, monoBehaviour.transform);
+        }
+
+        public Vector3 CellToWorld(Vector3Int cellPosition, Transform gridTransform, bool cellCenter = false)
+        {
+            if (gridTransform == null)
+                throw new ArgumentNullException(nameof(gridTransform));
+
+            float offset = cellCenter ? 0.5f : 0f;
+            Vector3 localPos = new Vector3(
+                cellPosition.x + offset,
+                cellPosition.y + offset,
+                cellPosition.z + offset);
+
+            return gridTransform.TransformPoint(localPos);
         }
         #endregion
     }

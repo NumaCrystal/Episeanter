@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
-using Episeanter.Content.Shared.Maps;
-using Mirror;
+using Episeanter.Content.Shared.Maps.Grids;
+using Episeanter.Content.Shared.Maps.Tiles;
+using Episeanter.Content.Shared.Maps.Events;
+using Episeanter.Content.Shared.Events;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -80,6 +82,9 @@ namespace Episeanter.Content.Client.Maps
         private void Awake()
         {
             body = GetComponent<Rigidbody>();
+        }
+        private void Start()
+        {
             damageLayerMaterial = TileVisuals.Instance.DamageLayerMaterial;
         }
 
@@ -89,9 +94,11 @@ namespace Episeanter.Content.Client.Maps
 
             data = gridData ?? throw new ArgumentNullException(nameof(gridData));
             RefreshDamageOverlay();
-            data.TileChanged += OnTileChanged;
-            data.HealthChanged += OnHealthChanged;
-            data.ChunkLoaded += OnChunkLoaded;
+            EventBus.Subscribe<PlaceTileEvent>(OnTileChanged);
+            EventBus.Subscribe<RemoveTileEvent>(OnTileChanged);
+            EventBus.Subscribe<TileHealthChangedEvent>(OnHealthChanged);
+            EventBus.Subscribe<ChunkLoadedEvent>(OnChunkLoaded);
+
 
             foreach (Vector2Int chunkPosition in data.ChunkPositions)
                 MarkChunkAndNeighborsDirty(chunkPosition);
@@ -101,9 +108,10 @@ namespace Episeanter.Content.Client.Maps
         {
             if (data != null)
             {
-                data.TileChanged -= OnTileChanged;
-                data.HealthChanged -= OnHealthChanged;
-                data.ChunkLoaded -= OnChunkLoaded;
+                EventBus.Unsubscribe<PlaceTileEvent>(OnTileChanged);
+                EventBus.Unsubscribe<RemoveTileEvent>(OnTileChanged);
+                EventBus.Unsubscribe<TileHealthChangedEvent>(OnHealthChanged);
+                EventBus.Unsubscribe<ChunkLoadedEvent>(OnChunkLoaded);
                 data = null;
             }
 
@@ -129,15 +137,35 @@ namespace Episeanter.Content.Client.Maps
         {
             MarkAffectedChunksDirty(position);
         }
-
-        private void OnHealthChanged(Vector3Int position, float health)
+        private void OnTileChanged(PlaceTileEvent e)
         {
-            dirtyChunks.Add(data.GetChunkPosition(position));
+            if(!GridSystem.IsGridEqual(this, e.GridNetId, out _))
+                return;
+            
+            OnTileChanged(e.Position, e.TileId);
+        }
+        private void OnTileChanged(RemoveTileEvent e)
+        {
+            if(!GridSystem.IsGridEqual(this, e.GridNetId, out _))
+                return;
+
+            OnTileChanged(e.Position, 0);
         }
 
-        private void OnChunkLoaded(Vector2Int chunkPosition)
+        private void OnHealthChanged(TileHealthChangedEvent e)
         {
-            MarkChunkAndNeighborsDirty(chunkPosition);
+            if(!GridSystem.IsGridEqual(this, e.GridNetId, out _))
+                return;
+
+            dirtyChunks.Add(data.GetChunkPosition(e.Position));
+        }
+
+        private void OnChunkLoaded(ChunkLoadedEvent e)
+        {
+            if(!GridSystem.IsGridEqual(this, e.GridNetId, out _))
+                return;
+
+            MarkChunkAndNeighborsDirty(e.ChunkPosition);
         }
 
         private void MarkChunkAndNeighborsDirty(Vector2Int chunkPosition)

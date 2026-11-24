@@ -1,53 +1,58 @@
-using Episeanter.Content.Shared.Maps;
+using Episeanter.Content.Shared.Maps.Grids;
+using Episeanter.Content.Shared.Maps.Tiles;
+using Episeanter.Content.Shared.Maps.Network;
+using Episeanter.Content.Shared.Maps.Util;
 using Mirror;
 using UnityEngine;
 
 namespace Episeanter.Content.Client.Maps
 {
     [RequireComponent(typeof(GridRenderer))]
-    public sealed class ClientGridSystem : NetworkBehaviour
+    public sealed class ClientGridSystem : GridSystem
     {
-        [SerializeField]
         private GridRenderer gridRenderer;
-
-        public GridData Data { get; private set; }
 
         public override void OnStartClient()
         {
             if (gridRenderer == null)
                 gridRenderer = GetComponent<GridRenderer>();
 
-            GridSettings settings = GridSettings.Instance;
-            Data = new GridData(settings.HeightLimit, settings.ChunkSize);
+            Initialize();
             gridRenderer.Bind(Data);
 
-            NetworkClient.RegisterHandler<ChunkDataMessage>(OnChunkData);
-            NetworkClient.RegisterHandler<TilesChangedMessage>(OnTilesChanged);
-            NetworkClient.RegisterHandler<TileHealthMessage>(OnHealth);
+            ClientGridModule.Instance.Add(this);
 
-            NetworkClient.Send(new GridSnapshotRequest { RegistryHash = TileRegistry.Instance.Hash });
+            NetworkClient.Send(new GridSnapshotRequest { GridNetworkId = netId, RegistryHash = TileRegistry.Instance.Hash });
         }
 
         public override void OnStopClient()
         {
-            NetworkClient.UnregisterHandler<ChunkDataMessage>();
-            NetworkClient.UnregisterHandler<TilesChangedMessage>();
-            NetworkClient.UnregisterHandler<TileHealthMessage>();
-
             if (gridRenderer != null)
                 gridRenderer.Unbind();
 
+            ClientGridModule.Instance.Remove(this);
+
             Data = null;
+        }
+
+        public static void RequestCreateGrid(Vector3 position, uint tileId)
+        {
+            if (!NetworkClient.active)
+                return;
+            if (!GridRules.CanCreate(ClientGridModule.Instance.Grids.Values, position, tileId))
+                return;
+
+            NetworkClient.Send(new CreateGridRequest { Position = position, TileId = tileId });
         }
 
         public void RequestPlace(Vector3Int position, uint tileId)
         {
             if (!NetworkClient.active || Data == null)
                 return;
-            if (!GridRules.CanPlace(Data, TileRegistry.Instance, position, tileId))
+            if (!GridRules.CanPlace(ClientGridModule.Instance.Grids.Values, this, position, tileId))
                 return;
 
-            NetworkClient.Send(new PlaceTileRequest { Position = position, TileId = tileId });
+            NetworkClient.Send(new PlaceTileRequest { GridNetworkId = netId, Position = position, TileId = tileId });
         }
 
         public void RequestRemove(Vector3Int position)
@@ -57,53 +62,17 @@ namespace Episeanter.Content.Client.Maps
             if (!GridRules.CanRemove(Data, position))
                 return;
 
-            NetworkClient.Send(new RemoveTileRequest { Position = position });
+            NetworkClient.Send(new RemoveTileRequest { GridNetworkId = netId, Position = position });
         }
 
         public void RequestDamage(Vector3Int position, float damage)
         {
             if (!NetworkClient.active || Data == null)
                 return;
-            if (!GridRules.CanDamage(Data, TileRegistry.Instance, position, damage, out _))
+            if (!GridRules.CanDamage(Data, position, damage, out _))
                 return;
 
-            NetworkClient.Send(new DamageTileRequest { Position = position, Damage = damage });
-        }
-
-        private void OnChunkData(ChunkDataMessage message)
-        {
-            if (Data == null)
-                return;
-
-            if (!Data.ImportChunk(message.ChunkPosition, message.Ids))
-                return;
-
-            Data.ReplaceChunkHealth(message.ChunkPosition, message.DamagedPositions, message.Healths);
-        }
-
-        private void OnTilesChanged(TilesChangedMessage message)
-        {
-            if (Data == null || message.Positions == null || message.Ids == null)
-                return;
-
-            int count = Mathf.Min(message.Positions.Length, message.Ids.Length);
-            for (int i = 0; i < count; i++)
-            {
-                if (message.Ids[i] == 0)
-                    Data.RemoveTile(message.Positions[i]);
-                else
-                    Data.SetTile(message.Positions[i], message.Ids[i]);
-            }
-        }
-
-        private void OnHealth(TileHealthMessage message)
-        {
-            if (Data == null || message.Positions == null || message.Healths == null)
-                return;
-
-            int count = Mathf.Min(message.Positions.Length, message.Healths.Length);
-            for (int i = 0; i < count; i++)
-                Data.SetHealth(message.Positions[i], message.Healths[i]);
+            NetworkClient.Send(new DamageTileRequest { GridNetworkId = netId, Position = position, Damage = damage });
         }
     }
 }

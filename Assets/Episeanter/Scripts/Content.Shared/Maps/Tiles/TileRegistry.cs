@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Episeanter.Content.Shared.Maps
+namespace Episeanter.Content.Shared.Maps.Tiles
 {
     [DisallowMultipleComponent]
-    public sealed class TileRegistry : MonoBehaviour
+    public class TileRegistry : MonoBehaviour
     {
         private static TileRegistry instance;
 

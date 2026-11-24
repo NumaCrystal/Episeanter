@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace Episeanter.Content.Shared.Maps
+namespace Episeanter.Content.Shared.Maps.Tiles
 {
     [CreateAssetMenu(fileName = "NewTile", menuName = "Episeanter/Grids/Tile Definition")]
-    public sealed class TileDefinition : ScriptableObject
+    public class TileDefinition : ScriptableObject
     {
         [SerializeField]
          private float maxHealth = 100f;

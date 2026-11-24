@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1001 &8827995687283978845
+--- !u!1001 &6682765898226284765
 PrefabInstance:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -8,9 +8,9 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 3755194618286889112, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+    - target: {fileID: 1431950144883402824, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: _assetId
-      value: 3976588212
+      value: 2046839531
       objectReference: {fileID: 0}
     - target: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_LocalPosition.x
@@ -54,33 +54,37 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       propertyPath: m_Name
-      value: DynGrid
+      value: DynamicGrid
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: -6391498482000164357, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: -6728625324752724861}
+      addedObject: {fileID: 2329560327486687890}
     - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 5066216608215695921}
+      addedObject: {fileID: 1108296190221607452}
+    - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1110691868646567252}
   m_SourcePrefab: {fileID: 100100000, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
---- !u!1 &3334813747689687403 stripped
+--- !u!1 &610519276641633259 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
-  m_PrefabInstance: {fileID: 8827995687283978845}
+  m_PrefabInstance: {fileID: 6682765898226284765}
   m_PrefabAsset: {fileID: 0}
---- !u!54 &-6728625324752724861
+--- !u!54 &2329560327486687890
 Rigidbody:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3334813747689687403}
+  m_GameObject: {fileID: 610519276641633259}
   serializedVersion: 5
-  m_Mass: 1
+  m_Mass: 10
   m_LinearDamping: 1
   m_AngularDamping: 0.05
   m_CenterOfMass: {x: 0, y: 0, z: 0}
@@ -99,21 +103,60 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 0
---- !u!114 &5066216608215695921
+--- !u!114 &1108296190221607452
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3334813747689687403}
+  m_GameObject: {fileID: 610519276641633259}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6b140e63fa2447928c4ac6261dd667b9, type: 3}
+  m_Script: {fileID: 11500000, guid: b94ff7b07a0a3bc4389b05c9c53ed803, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Episeanter.Grids.DynamicGrid
+  m_EditorClassIdentifier: Episeanter.Content.Server::Episeanter.Content.Server.Maps.DynamicGridMotor
   syncDirection: 0
   syncMode: 0
   syncInterval: 0
   rotationX: 0
   rotationZ: 0
   positionY: 0
+--- !u!114 &1110691868646567252
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 610519276641633259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b20dc110904e47f8a154cdcf6433eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkRigidbodyUnreliable
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 2008828174595949644}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01
+--- !u!4 &2008828174595949644 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+  m_PrefabInstance: {fileID: 6682765898226284765}
+  m_PrefabAsset: {fileID: 0}

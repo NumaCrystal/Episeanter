@@ -1,4 +1,8 @@
-using Episeanter.Content.Shared.Maps;
+using System.Collections.Generic;
+using System.Linq;
+using Episeanter.Content.Shared.Maps.Grids;
+using Episeanter.Content.Shared.Maps.Util;
+using Mirror.BouncyCastle.Asn1.X509;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -9,15 +13,14 @@ namespace Episeanter.Content.Client.Maps
     {
         private const float CellOffset = 0.001f;
 
-        [SerializeField] private Camera targetCamera;
         [SerializeField, Min(0.01f)] private float maxDistance = 100f;
         [SerializeField, Min(0.01f)] private float damagePerHit = 10f;
         [SerializeField] private LayerMask interactionLayers = Physics.DefaultRaycastLayers;
         [SerializeField, Min(1), Tooltip("Tile registry IDs cycled through with the mouse wheel.")]
+        private Camera targetCamera;
         private uint[] tileIdsForTesting = { 1, 2 };
 
         private Camera cachedCamera;
-        private ClientGridSystem fallbackSystem;
         private int selectedTileIndex;
 
         private void Awake()
@@ -31,8 +34,6 @@ namespace Episeanter.Content.Client.Maps
                 Debug.LogError("GridClickInteraction requires a camera on this object or a MainCamera in the scene.", this);
                 enabled = false;
             }
-
-            fallbackSystem = FindAnyObjectByType<ClientGridSystem>();
         }
 
         private void Update()
@@ -110,30 +111,30 @@ namespace Episeanter.Content.Client.Maps
             if (!TryGetSelectedTileId(out uint tileId))
                 return;
 
-            if (fallbackSystem == null)
-                fallbackSystem = FindAnyObjectByType<ClientGridSystem>();
-            if (fallbackSystem == null || fallbackSystem.Data == null)
-                return;
-
-            GridData data = fallbackSystem.Data;
-            Transform gridTransform = fallbackSystem.transform;
             Ray ray = cachedCamera.ScreenPointToRay(mouse.position.ReadValue());
-            Plane placementPlane = new Plane(gridTransform.up, gridTransform.position);
+            Plane placementPlane = new Plane(Vector3.up, new Vector3(0f, GridSettings.Instance.GridY + 0.1f, 0f));
             if (!placementPlane.Raycast(ray, out float distance) ||
                 distance < 0f || distance > maxDistance)
                 return;
 
-            Vector3 localPoint = gridTransform.InverseTransformPoint(ray.GetPoint(distance));
-            Vector3Int cell = new Vector3Int(
-                Mathf.FloorToInt(localPoint.x),
-                0,
-                Mathf.FloorToInt(localPoint.z));
-            cell.y = data.GetTileId(cell) == 0 ? 0 : 1;
+            Vector3 targetPoint = ray.GetPoint(distance);
+
+            if (!GridSystem.FindGridAt<ClientGridSystem>(ClientGridModule.Instance.Grids.Values, targetPoint, out ClientGridSystem grid))
+            {
+                ClientGridSystem.RequestCreateGrid(Vector3Int.FloorToInt(targetPoint), tileId);
+                return;
+            }
+
+            GridData data = grid.Data;
+            Vector3Int cell = data.WorldToCell(targetPoint, grid);
+
+            targetPoint.y = data.GetTileId(cell) == 0 ? 0 : 1;
 
             if (!data.InBounds(cell))
                 return;
 
-            fallbackSystem.RequestPlace(cell, tileId);
+            grid.RequestPlace(cell, tileId);
+            return;
         }
 
         private void TryDamage(Mouse mouse)

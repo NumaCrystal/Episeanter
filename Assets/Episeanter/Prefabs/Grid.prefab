@@ -9,6 +9,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5142335316388592785}
+  - component: {fileID: 5427332267741038778}
+  - component: {fileID: 6903784659147309665}
+  - component: {fileID: 1431950144883402824}
+  - component: {fileID: 5723236479192138119}
+  - component: {fileID: -6391498482000164357}
   m_Layer: 0
   m_Name: Grid
   m_TagString: Untagged
@@ -31,3 +36,102 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5427332267741038778
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6108275418737933110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56af72a7f76b79c4588b1dc9ef7f9bd5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Episeanter.Content.Client::Episeanter.Content.Client.Maps.GridRenderer
+  generateMeshColliders: 1
+--- !u!114 &6903784659147309665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6108275418737933110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c944cb3a6bbb0a14ca15fd7ca0e1e512, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Episeanter.Content.Server::Episeanter.Contnet.Server.Maps.ServerGridSystem
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  allowClientEdits: 1
+  maxReach: 0
+  generateOnStart: 0
+  generateSize: {x: 100, y: 100}
+  generateTileId: 1
+--- !u!114 &1431950144883402824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6108275418737933110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b91ecbcc199f4492b9a91e820070131, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror::Mirror.NetworkIdentity
+  sceneId: 0
+  _assetId: 1908269464
+  serverOnly: 0
+  visibility: 0
+  hasSpawned: 0
+--- !u!114 &5723236479192138119
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6108275418737933110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9fafd6cc678c4c249a9da595ea394929, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Episeanter.Content.Client::Episeanter.Content.Client.Maps.ClientGridSystem
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+--- !u!114 &-6391498482000164357
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6108275418737933110}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a553cb17010b2403e8523b558bffbc14, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Mirror.Components::Mirror.NetworkTransformUnreliable
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  target: {fileID: 5142335316388592785}
+  syncPosition: 1
+  syncRotation: 1
+  syncScale: 0
+  onlySyncOnChange: 1
+  compressRotation: 1
+  interpolatePosition: 1
+  interpolateRotation: 1
+  interpolateScale: 1
+  coordinateSpace: 0
+  timelineOffset: 1
+  showGizmos: 0
+  showOverlay: 0
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.5}
+  bufferResetMultiplier: 3
+  useFixedUpdate: 0
+  positionSensitivity: 0.01
+  rotationSensitivity: 0.01
+  scaleSensitivity: 0.01

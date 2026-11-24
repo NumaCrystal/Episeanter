@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace Episeanter.Content.Shared.Maps
+namespace Episeanter.Content.Shared.Maps.Util
 {
     [DisallowMultipleComponent]
     public sealed class GridSettings : MonoBehaviour
@@ -10,6 +10,9 @@ namespace Episeanter.Content.Shared.Maps
 
         [SerializeField, Min(1)] private int heightLimit = 2;
         [SerializeField, Min(1)] private int chunkSize = 16;
+        [SerializeField, Min(0)] private int gridY = 0;
+
+        [SerializeField] private GameObject gridPrefab;
 
         public static GridSettings Instance
         {
@@ -22,8 +25,10 @@ namespace Episeanter.Content.Shared.Maps
             }
         }
 
+        public GameObject GridPrefab => gridPrefab;
         public int HeightLimit => heightLimit;
         public int ChunkSize => chunkSize;
+        public int GridY => gridY;
 
         private void Awake()
         {
@@ -47,12 +52,6 @@ namespace Episeanter.Content.Shared.Maps
         private static void ResetSingleton()
         {
             instance = null;
-        }
-
-        private void OnValidate()
-        {
-            heightLimit = Mathf.Max(1, heightLimit);
-            chunkSize = Mathf.Max(1, chunkSize);
         }
     }
 }

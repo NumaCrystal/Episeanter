@@ -1,12 +1,17 @@
 using System;
 using System.Collections.Generic;
-using Episeanter.Content.Shared.Maps;
+using Episeanter.Content.Shared.Maps.Grids;
+using Episeanter.Content.Shared.Maps.Tiles;
+using Episeanter.Content.Shared.Maps.Network;
+using Episeanter.Content.Shared.Maps.Util;
+using Episeanter.Content.Shared.Events;
+using Episeanter.Content.Shared.Maps.Events;
 using Mirror;
 using UnityEngine;
 
 namespace Episeanter.Content.Server.Maps
 {
-    public sealed class ServerGridSystem : NetworkBehaviour
+    public sealed class ServerGridSystem : GridSystem
     {
         private const int MaxChangesPerMessage = 512;
 
@@ -33,19 +38,14 @@ namespace Episeanter.Content.Server.Maps
         private readonly List<Vector3Int> healthPositions = new List<Vector3Int>();
         private readonly List<float> healthValues = new List<float>();
 
-        public GridData Data { get; private set; }
-
         public override void OnStartServer()
         {
-            GridSettings settings = GridSettings.Instance;
-            Data = new GridData(settings.HeightLimit, settings.ChunkSize);
-            Data.TileChanged += OnTileChanged;
-            Data.HealthChanged += OnHealthChanged;
+            ServerGridModule.Instance.Add(this);
+            Initialize();
 
-            NetworkServer.RegisterHandler<GridSnapshotRequest>(OnSnapshotRequest);
-            NetworkServer.RegisterHandler<PlaceTileRequest>(OnPlaceRequest);
-            NetworkServer.RegisterHandler<RemoveTileRequest>(OnRemoveRequest);
-            NetworkServer.RegisterHandler<DamageTileRequest>(OnDamageRequest);
+            EventBus.Subscribe<PlaceTileEvent>(OnTilePlaced);
+            EventBus.Subscribe<RemoveTileEvent>(OnTileRemoved);
+            EventBus.Subscribe<TileHealthChangedEvent>(OnHealthChanged);
 
             if (generateOnStart)
                 Generate();
@@ -53,15 +53,12 @@ namespace Episeanter.Content.Server.Maps
 
         public override void OnStopServer()
         {
-            NetworkServer.UnregisterHandler<GridSnapshotRequest>();
-            NetworkServer.UnregisterHandler<PlaceTileRequest>();
-            NetworkServer.UnregisterHandler<RemoveTileRequest>();
-            NetworkServer.UnregisterHandler<DamageTileRequest>();
-
+            ServerGridModule.Instance.Remove(this);
             if (Data != null)
             {
-                Data.TileChanged -= OnTileChanged;
-                Data.HealthChanged -= OnHealthChanged;
+                EventBus.Unsubscribe<RemoveTileEvent>(OnTileRemoved);
+                EventBus.Unsubscribe<PlaceTileEvent>(OnTilePlaced);
+                EventBus.Unsubscribe<TileHealthChangedEvent>(OnHealthChanged);
             }
 
             Data = null;
@@ -71,13 +68,13 @@ namespace Episeanter.Content.Server.Maps
         }
 
         public bool SetTile(Vector3Int position, uint tileId)
-             => Data != null && GridRules.CanPlace(Data, TileRegistry.Instance, position, tileId) && Data.SetTile(position, tileId);
+             => Data != null && GridRules.CanPlace(ServerGridModule.Instance.Grids.Values, this, position, tileId) && Data.SetTile(position, tileId);
 
         public bool RemoveTile(Vector3Int position)
             => Data != null && Data.RemoveTile(position);
 
         public bool DamageTile(Vector3Int position, float damage)
-            => Data != null && GridRules.TryApplyDamage(Data, TileRegistry.Instance, position, damage);
+            => Data != null && GridRules.TryApplyDamage(Data, position, damage);
 
         private void Generate()
         {
@@ -92,20 +89,26 @@ namespace Episeanter.Content.Server.Maps
             pendingHealth.Clear();
         }
 
-        private void OnTileChanged(Vector3Int position, uint tileId)
+        private void OnTilePlaced(PlaceTileEvent e)
         {
-            pendingPositions.Add(position);
-            pendingIds.Add(tileId);
-            if (tileId == 0)
-                pendingHealth.Remove(position);
+            if(!IsGridEqual(this, e.GridNetId, out _))
+                return;
+
+            pendingPositions.Add(e.Position);
+            pendingIds.Add(e.TileId);
         }
 
-        private void OnHealthChanged(Vector3Int position, float health)
+        private void OnTileRemoved(RemoveTileEvent e)
         {
-            pendingHealth[position] = health;
+            if(!IsGridEqual(this, e.GridNetId, out _))
+                return;
+
+            pendingPositions.Add(e.Position);
+            pendingIds.Add(0);
+            pendingHealth.Remove(e.Position);
         }
 
-        private void OnSnapshotRequest(NetworkConnectionToClient conn, GridSnapshotRequest request)
+        public void SendSnapshot(NetworkConnectionToClient conn, GridSnapshotRequest request)
         {
             if (request.RegistryHash != TileRegistry.Instance.Hash)
                 return;
@@ -115,6 +118,7 @@ namespace Episeanter.Content.Server.Maps
                 Data.CopyDamagedTiles(chunkPosition, healthPositions, healthValues);
                 conn.Send(new ChunkDataMessage
                 {
+                    GridNetworkId = netId,
                     ChunkPosition = chunkPosition,
                     Ids = Data.ExportChunk(chunkPosition),
                     DamagedPositions = healthPositions.ToArray(),
@@ -123,40 +127,15 @@ namespace Episeanter.Content.Server.Maps
             }
         }
 
-        private void OnPlaceRequest(NetworkConnectionToClient conn, PlaceTileRequest request)
+        private void OnHealthChanged(TileHealthChangedEvent e)
         {
-            if (!CanClientEdit(conn, request.Position))
-                return;
-            if (!GridRules.CanPlace(Data, TileRegistry.Instance, request.Position, request.TileId))
+            if(!IsGridEqual(this, e.GridNetId, out _))
                 return;
 
-            Data.SetTile(request.Position, request.TileId);
+            pendingHealth[e.Position] = e.Health;
         }
 
-        private void OnRemoveRequest(NetworkConnectionToClient conn, RemoveTileRequest request)
-        {
-            if (!CanClientEdit(conn, request.Position))
-                return;
-            if (!GridRules.CanRemove(Data, request.Position))
-                return;
-
-            Data.RemoveTile(request.Position);
-        }
-
-        private void OnDamageRequest(NetworkConnectionToClient conn, DamageTileRequest request)
-        {
-            if (!CanClientEdit(conn, request.Position))
-                return;
-            if (!IsFiniteDamage(request.Damage))
-            {
-                Debug.LogWarning($"Rejected invalid tile damage value {request.Damage}.", this);
-                return;
-            }
-
-            GridRules.TryApplyDamage(Data, TileRegistry.Instance, request.Position, request.Damage);
-        }
-
-        private bool CanClientEdit(NetworkConnectionToClient conn, Vector3Int cell)
+        public bool CanClientEdit(NetworkConnectionToClient conn, Vector3Int cell)
         {
             if (!allowClientEdits)
             {
@@ -191,7 +170,7 @@ namespace Episeanter.Content.Server.Maps
                 pendingPositions.CopyTo(start, positions, 0, count);
                 pendingIds.CopyTo(start, ids, 0, count);
 
-                NetworkServer.SendToReady(new TilesChangedMessage { Positions = positions, Ids = ids });
+                NetworkServer.SendToReady(new TilesChangedMessage { GridNetworkId = netId, Positions = positions, Ids = ids });
             }
 
             pendingPositions.Clear();
@@ -219,11 +198,11 @@ namespace Episeanter.Content.Server.Maps
                 var healths = new float[count];
                 healthPositions.CopyTo(start, positions, 0, count);
                 healthValues.CopyTo(start, healths, 0, count);
-                NetworkServer.SendToReady(new TileHealthMessage { Positions = positions, Healths = healths });
+                NetworkServer.SendToReady(new TileHealthMessage { GridNetworkId = netId, Positions = positions, Healths = healths });
             }
         }
 
-        private static bool IsFiniteDamage(float damage)
+        public static bool IsFiniteDamage(float damage)
             => damage > 0f && !float.IsNaN(damage) && !float.IsInfinity(damage);
     }
 }

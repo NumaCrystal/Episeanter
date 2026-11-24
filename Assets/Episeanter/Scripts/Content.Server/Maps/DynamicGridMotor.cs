@@ -1,5 +1,7 @@
 using System.Collections.Generic;
-using Episeanter.Content.Shared.Maps;
+using Episeanter.Content.Shared.Maps.Grids;
+using Episeanter.Content.Shared.Maps.Events;
+using Episeanter.Content.Shared.Events;
 using Mirror;
 using UnityEngine;
 
@@ -100,7 +102,8 @@ namespace Episeanter.Content.Server.Maps
         private void Bind(GridData gridData)
         {
             data = gridData;
-            data.TileChanged += OnTileChanged;
+            EventBus.Subscribe<PlaceTileEvent>(OnTileChanged);
+            EventBus.Subscribe<RemoveTileEvent>(OnTileChanged);
             foreach (Vector2Int position in data.ChunkPositions)
                 dirtyChunks.Add(position);
         }
@@ -108,7 +111,10 @@ namespace Episeanter.Content.Server.Maps
         private void Unbind()
         {
             if (data != null)
-                data.TileChanged -= OnTileChanged;
+            {
+                EventBus.Unsubscribe<PlaceTileEvent>(OnTileChanged);
+                EventBus.Unsubscribe<RemoveTileEvent>(OnTileChanged);
+            }
 
             data = null;
             foreach (Chunk chunk in chunks.Values)
@@ -121,6 +127,20 @@ namespace Episeanter.Content.Server.Maps
         private void OnTileChanged(Vector3Int position, uint tileId)
         {
             dirtyChunks.Add(data.GetChunkPosition(position));
+        }
+        private void OnTileChanged(PlaceTileEvent e)
+        {
+            if(!GridSystem.IsGridEqual(this, e.GridNetId, out _))
+                return;
+
+            OnTileChanged(e.Position, e.TileId);
+        }
+        private void OnTileChanged(RemoveTileEvent e)
+        {
+            if(!GridSystem.IsGridEqual(this, e.GridNetId, out _))
+                return;
+
+            OnTileChanged(e.Position, 0);
         }
 
         private void RebuildChunk(Vector2Int position, Chunk chunk)
