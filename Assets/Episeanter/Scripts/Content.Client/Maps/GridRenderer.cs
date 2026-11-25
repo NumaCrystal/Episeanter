@@ -83,22 +83,20 @@ namespace Episeanter.Content.Client.Maps
         {
             body = GetComponent<Rigidbody>();
         }
-        private void Start()
-        {
-            damageLayerMaterial = TileVisuals.Instance.DamageLayerMaterial;
-        }
 
         public void Bind(GridData gridData)
         {
             Unbind();
 
-            data = gridData ?? throw new ArgumentNullException(nameof(gridData));
-            RefreshDamageOverlay();
-            EventBus.Subscribe<PlaceTileEvent>(OnTileChanged);
-            EventBus.Subscribe<RemoveTileEvent>(OnTileChanged);
+            damageLayerMaterial = TileVisuals.Instance.DamageLayerMaterial;
+
+            EventBus.Subscribe<PlaceTileEvent>(OnTilePlaced);
+            EventBus.Subscribe<RemoveTileEvent>(OnTileRemoved);
             EventBus.Subscribe<TileHealthChangedEvent>(OnHealthChanged);
             EventBus.Subscribe<ChunkLoadedEvent>(OnChunkLoaded);
 
+            data = gridData ?? throw new ArgumentNullException(nameof(gridData));
+            RefreshDamageOverlay();
 
             foreach (Vector2Int chunkPosition in data.ChunkPositions)
                 MarkChunkAndNeighborsDirty(chunkPosition);
@@ -108,8 +106,8 @@ namespace Episeanter.Content.Client.Maps
         {
             if (data != null)
             {
-                EventBus.Unsubscribe<PlaceTileEvent>(OnTileChanged);
-                EventBus.Unsubscribe<RemoveTileEvent>(OnTileChanged);
+                EventBus.Unsubscribe<PlaceTileEvent>(OnTilePlaced);
+                EventBus.Unsubscribe<RemoveTileEvent>(OnTileRemoved);
                 EventBus.Unsubscribe<TileHealthChangedEvent>(OnHealthChanged);
                 EventBus.Unsubscribe<ChunkLoadedEvent>(OnChunkLoaded);
                 data = null;
@@ -137,14 +135,14 @@ namespace Episeanter.Content.Client.Maps
         {
             MarkAffectedChunksDirty(position);
         }
-        private void OnTileChanged(PlaceTileEvent e)
+        private void OnTilePlaced(PlaceTileEvent e)
         {
             if(!GridSystem.IsGridEqual(this, e.GridNetId, out _))
                 return;
             
             OnTileChanged(e.Position, e.TileId);
         }
-        private void OnTileChanged(RemoveTileEvent e)
+        private void OnTileRemoved(RemoveTileEvent e)
         {
             if(!GridSystem.IsGridEqual(this, e.GridNetId, out _))
                 return;
