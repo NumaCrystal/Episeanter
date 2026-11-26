@@ -72,14 +72,8 @@ namespace Episeanter.Content.Server.Maps
 
         private void OnCreateGridRequest(NetworkConnectionToClient conn, CreateGridRequest request)
         {
-            if (!GridRules.CanCreate(Grids.Values, request.Position, request.TileId))
-                return;
-
-            GameObject go = Object.Instantiate(GridSettings.Instance.GridPrefab, request.Position, Quaternion.identity);
-            NetworkServer.Spawn(go);
-
-            if (go.TryGetComponent(out ServerGridSystem grid))
-                grid.Data.SetTile(grid.Data.WorldToCell(request.Position, grid.transform), request.TileId);
+            if(ServerGridSystem.CreateGrid(request.Position, 0, out ServerGridSystem gridSystem))
+                gridSystem.Data.SetTile(gridSystem.Data.WorldToCell(request.Position, gridSystem), request.TileId);
         }
     }
 }

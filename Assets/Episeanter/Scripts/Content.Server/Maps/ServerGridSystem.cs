@@ -71,10 +71,31 @@ namespace Episeanter.Content.Server.Maps
              => Data != null && GridRules.CanPlace(ServerGridModule.Instance.Grids.Values, this, position, tileId) && Data.SetTile(position, tileId);
 
         public bool RemoveTile(Vector3Int position)
-            => Data != null && Data.RemoveTile(position);
+            => Data != null && GridRules.CanRemove(Data, position) && Data.RemoveTile(position);
 
         public bool DamageTile(Vector3Int position, float damage)
             => Data != null && GridRules.TryApplyDamage(Data, position, damage);
+
+        public static bool CreateGrid(Vector3 position, float rotation, out ServerGridSystem gridSystem, bool checkRules = true)
+        {
+            if (checkRules && !GridRules.CanCreate<ServerGridSystem>(ServerGridModule.Instance.Grids.Values, position))
+            {
+                gridSystem = null;
+                return false;
+            }
+
+            GameObject go = Instantiate(
+                GridSettings.Instance.GridPrefab, position, Quaternion.Euler(0f, rotation, 0f));
+
+            if (!go.TryGetComponent(out gridSystem))
+            {
+                Destroy(go);
+                return false;
+            }
+
+            NetworkServer.Spawn(go);
+            return true;
+        }
 
         private void Generate()
         {

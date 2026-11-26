@@ -14,6 +14,6 @@
   <Project Path="Telepathy.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
-  <Project Path="Mirror.CompilerSymbols.csproj" />
   <Project Path="Episeanter.Content.Server.csproj" />
+  <Project Path="Mirror.CompilerSymbols.csproj" />
 </Solution>

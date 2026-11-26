@@ -7,14 +7,12 @@ namespace Episeanter.Content.Shared.Maps.Util
 {
     public static class GridRules
     {
-        public static bool CanCreate<TGrid>(IEnumerable<TGrid> grids, Vector3 position, uint tileId) where TGrid : GridSystem
+        public static bool CanCreate<TGrid>(IEnumerable<TGrid> grids, Vector3 position) where TGrid : GridSystem
         {
-            if (tileId == 0 || position.y != GridSettings.Instance.GridY)
+            if (position.y != GridSettings.Instance.GridY)
                 return false;
-            if (!TileRegistry.Instance.TryGetDefinition(tileId, out _))
-                return false;
-            if (GridSystem.FindGridAt<TGrid>(grids, position, out _))
-                return false;
+            // if (GridSystem.FindGridAt<TGrid>(grids, position, out _))
+            //     return false;
 
             return true;
         }
@@ -27,7 +25,9 @@ namespace Episeanter.Content.Shared.Maps.Util
                 return false;
             if (!TileRegistry.Instance.TryGetDefinition(tileId, out _))
                 return false;
-            if (grid.Data.GetTileId(new Vector3Int(position.x, position.y - 1, position.z)) == 0
+            if (grid.Data.TryGetTileId(position, out _))
+                return false;
+            if (!grid.Data.TryGetTileId(new Vector3Int(position.x, position.y - 1, position.z), out _)
                 && position.y > 0)
                 return false;
             if (!grid.Data.IsTileConnected(position))

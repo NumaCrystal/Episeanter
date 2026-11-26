@@ -70,6 +70,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1110691868646567252}
+    - targetCorrespondingSourceObject: {fileID: 6108275418737933110, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8589127539670610218}
   m_SourcePrefab: {fileID: 100100000, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}
 --- !u!1 &610519276641633259 stripped
 GameObject:
@@ -155,6 +158,23 @@ MonoBehaviour:
   positionSensitivity: 0.01
   rotationSensitivity: 0.01
   scaleSensitivity: 0.01
+--- !u!114 &8589127539670610218
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 610519276641633259}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d86b1685f8c26c54b983ba3d37d912dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Episeanter.Content.Server::Episeanter.Content.Server.Maps.DestructibleGrid
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  gridPrefab: {fileID: 0}
+  minPieceSize: 1
 --- !u!4 &2008828174595949644 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5142335316388592785, guid: 683d23d5528ee254a8944fe06b049b1b, type: 3}

@@ -39,7 +39,7 @@ namespace Episeanter.Content.Client.Maps
         {
             if (!NetworkClient.active)
                 return;
-            if (!GridRules.CanCreate(ClientGridModule.Instance.Grids.Values, position, tileId))
+            if (!GridRules.CanCreate(ClientGridModule.Instance.Grids.Values, position))
                 return;
 
             NetworkClient.Send(new CreateGridRequest { Position = position, TileId = tileId });
